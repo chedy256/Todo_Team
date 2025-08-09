@@ -55,8 +55,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 colors: [
-                  Colors.lightBlueAccent.shade700,
-                  Colors.lightBlueAccent.shade400,
+                  Colors.blueAccent.shade700,
+                  Colors.blue,
                   Colors.lightBlueAccent.shade100,
                 ],
               ),
@@ -134,6 +134,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         SizedBox(height: 10),
                         // Password strength indicators
                         _buildPasswordStrengthIndicators(),
+                        SizedBox(height: 16),
                         // Confirm password
                         TextFormField(
                           controller: _confirmPasswordController,
@@ -162,8 +163,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             ),
                           ),
                         ),
-
-                        SizedBox(height: 24),
                       ],
                     ),
 
@@ -181,7 +180,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               children: [
                 Expanded(
                   child: Container(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 12, 24),
+                    padding: const EdgeInsets.only(right: 12),
                     child: ElevatedButton.icon(
                       onPressed: () => Navigator.pushNamed(
                         context,
@@ -210,7 +209,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 Expanded(
                   child: Container(
-                    padding: const EdgeInsets.fromLTRB(12, 24, 24, 24),
+                    padding: const EdgeInsets.only(left: 12),
                     child: ElevatedButton(
                       onPressed: () => Navigator.pushNamed(context, '/tasks'),
                       style: ElevatedButton.styleFrom(
@@ -252,12 +251,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildIndicator("At least 8 characters", _hasMinLength),
-        _buildIndicator("Uppercase letter", _hasUppercase),
-        _buildIndicator("Lowercase letter", _hasLowercase),
-        _buildIndicator("Number", _hasNumber),
-        _buildIndicator("Special character", _hasSpecialChar),
-        SizedBox(height: 20),
+        _buildIndicator("Au moins 8 caractères", _hasMinLength),
+        _buildIndicator("1 Lettre majusule", _hasUppercase),
+        _buildIndicator("1 Lettre minuscule", _hasLowercase),
+        _buildIndicator('1 Numéro', _hasNumber),
+        _buildIndicator('1 Caractère spéciale', _hasSpecialChar),
       ],
     );
   }
@@ -274,7 +272,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         Text(
           text,
           style: TextStyle(
-            color: isValid ? Colors.green : Colors.black54,
+            color: isValid ? Colors.black : Colors.black54,
             fontSize: 12,
           ),
         ),
