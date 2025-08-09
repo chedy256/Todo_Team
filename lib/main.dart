@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
 import 'package:project/views/auth/email_screen.dart';
 import 'package:project/views/auth/login_screen.dart';
 import 'package:project/views/auth/sign_up_screen.dart';
 import 'package:project/views/home/tasks_screen.dart';
 
-void main() {
+void main() async{
   WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
   runApp(const MyApp());
 }
 
