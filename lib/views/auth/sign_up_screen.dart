@@ -171,7 +171,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ],
             ),
           ),
-          Positioned.fill(
+          Positioned(
+            right: 24,
+            left: 24,
             top: 750,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
