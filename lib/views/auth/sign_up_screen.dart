@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project/controllers/auth_controller.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -7,10 +8,10 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
+  static final _formKey = GlobalKey<FormState>();
+  static final _nameController = TextEditingController();
+  static final _passwordController = TextEditingController();
+  static final _confirmPasswordController = TextEditingController();
 
   final _passwordFocusNode = FocusNode();
   bool _isPasswordVisible = false;
@@ -41,7 +42,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,7 +65,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           SingleChildScrollView(
             padding: EdgeInsets.only(bottom: 100), // Add space for the buttons
             child: Column(
-              children: [
+              children: <Widget>[
                 SizedBox(height: 120),
                 const Text(
                   "S'inscrire",
@@ -79,15 +79,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 SizedBox(height: 40),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Form(
+                    key: _formKey,
                     child: Column(
                       children: <Widget>[
                         TextFormField(
-                          key: _formKey,
                           controller: _nameController,
                           keyboardType: TextInputType.name,
                           decoration: InputDecoration(
                             labelText: 'Votre nom',
-                            hintText: 'Entrer votre nom',
+                            hintText: 'Entrez votre nom',
                             prefixIcon: Icon(Icons.person),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -108,7 +109,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           onChanged: _validatePasswordStrength,
                           decoration: InputDecoration(
                             labelText: 'Mot de passe',
-                            hintText: 'Entrer votre mot de passe',
+                            hintText: 'Entrez votre mot de passe',
                             prefixIcon: Icon(Icons.password_outlined),
                             suffixIcon: IconButton(
                               icon: Icon(
@@ -140,7 +141,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           controller: _confirmPasswordController,
                           obscureText: !_isPasswordVisible,
                           decoration: InputDecoration(
-                            hintText: 'Confirmer votre mot de passe',
+                            hintText: 'Confirmez votre mot de passe',
                             prefixIcon: Icon(Icons.password_outlined),
                             suffixIcon: IconButton(
                               icon: Icon(
@@ -162,10 +163,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return null;
+                            }
+                            if (value != _passwordController.text) {
+                              return 'Les mots de passe ne correspondent pas';
+                            }
+                            return null;
+                          },
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                         ),
                       ],
                     ),
-
+                  ),
                 ),
               ],
             ),
@@ -177,18 +188,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+              children: <Widget>[
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.only(right: 12),
                     child: ElevatedButton.icon(
-                      onPressed: () => Navigator.pushNamed(
-                        context,
-                        '/login',
-                      ), //changer à /email
+                      onPressed: () => Navigator.pushNamed(context, '/email'),
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       label: const Text(
-                        'Se Connecter', //changer à Retour
+                        'Retour',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -211,7 +219,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   child: Container(
                     padding: const EdgeInsets.only(left: 12),
                     child: ElevatedButton(
-                      onPressed: () => Navigator.pushNamed(context, '/tasks'),
+                      onPressed: () => { if (_formKey.currentState!.validate() && _hasLowercase && _hasMinLength && _hasNumber && _hasUppercase && _hasSpecialChar)
+                        AuthController.signup(
+                          _passwordController.text,
+                          _nameController.text,
+                          context,
+                        )
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.lightBlueAccent.shade700,
                         padding: const EdgeInsets.symmetric(vertical: 16),

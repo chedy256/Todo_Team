@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project/controllers/auth_controller.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -7,12 +8,12 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final passwordController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
 
   @override
   void dispose() {
-    passwordController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -29,8 +30,8 @@ class _LoginScreenState extends State<LoginScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 colors: [
-                  Colors.lightBlueAccent.shade700,
-                  Colors.lightBlueAccent.shade400,
+                  Colors.blueAccent.shade700,
+                  Colors.blue,
                   Colors.lightBlueAccent.shade100,
                 ],
               ),
@@ -40,9 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
             left: 0,
             right: 0,
             top: 120,
-            child: Column(
-              children: <Widget>[
-                const Text(
+            child: Text(
                   "Se connecter",
                   style: TextStyle(
                     color: Colors.black,
@@ -51,23 +50,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-              ],
-            ),
           ),
           Positioned(
             left: 24,
             right: 24,
             top: 250,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                TextFormField(
-                  controller: passwordController,
+            child: TextFormField(
+                  controller: _passwordController,
                   obscureText: !_isPasswordVisible,
                   decoration: InputDecoration(
                     labelText: 'Mot de passe',
-                    hintText: 'Entrer votre mot de passe',
+                    hintText: 'Entrez votre mot de passe',
                     prefixIcon: Icon(Icons.password_outlined),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -90,8 +83,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-              ],
-            ),
           ),
           Positioned(
             top: 750,
@@ -131,10 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Container(
                     padding: const EdgeInsets.only(left: 12),
                     child: ElevatedButton(
-                      onPressed: () => Navigator.pushNamed(
-                        context,
-                        '/tasks',
-                      ), //authController.login(context),
+                      onPressed: () => AuthController.login(_passwordController.text, context), //authController.login(context),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.lightBlueAccent.shade700,
                         padding: const EdgeInsets.symmetric(vertical: 16),

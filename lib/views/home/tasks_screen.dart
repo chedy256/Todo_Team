@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project/controllers/auth_controller.dart';
 
 class TasksScreen extends StatelessWidget {
   const TasksScreen({super.key});
@@ -6,14 +7,31 @@ class TasksScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-          child:Column(
+      body: Stack(
+        children: [
+          Positioned(
+            top: 48,
+            left: 300,
+            right: 24,
+            child: IconButton(
+              onPressed: () => AuthController.logout(context),
+              icon: Icon(Icons.logout_outlined, color: Colors.black),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 4,
+                shadowColor: Colors.black26,
+              ),
+            ),
+          ),
+          Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             spacing: 30,
             children: [
               Icon(Icons.offline_pin_outlined),
-              Icon(Icons.signal_wifi_connected_no_internet_4),
               const Text(
                 'Tasks Screen en Cours de development',
                 style: TextStyle(
@@ -24,7 +42,8 @@ class TasksScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
             ],
-          )
+          ),
+        ],
       ),
     );
   }
