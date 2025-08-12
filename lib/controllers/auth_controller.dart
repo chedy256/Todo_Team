@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:project/models/current_user.dart';
+//import 'package:project/models/current_user.dart';
 
 import '../main.dart';
+import '../models/current_user.dart';
 
 class AuthController {
   static bool isLoggedIn=false;
   static late String email;
+
   static Future<bool> checkEmailExists(
     String email,
     BuildContext context,
@@ -43,7 +45,10 @@ class AuthController {
     }
     if (password == 'admin' && context.mounted) {
       isLoggedIn=true;
-      Navigator.pushNamed(context, '/tasks');
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/tasks', (route) => false,
+      );
     }
   }
 
@@ -65,13 +70,21 @@ class AuthController {
 
     if (context.mounted) {
       Navigator.of(context).pop();
-      Navigator.pushNamed(context, '/tasks');
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/tasks',
+            (route) => false,
+      );
     }
   }
   static void logout(BuildContext context){
     //delete all the files or just the currentuser in case of re-login i can check between last user and new user (drop local storage for example)
     isLoggedIn=false;
-    Navigator.pushNamed(context, '/email');
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/email',
+          (route) => false,
+    );
   }
 
   static Future<void> checkEmail(
