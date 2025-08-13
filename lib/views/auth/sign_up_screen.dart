@@ -8,13 +8,21 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
-  static final _formKey = GlobalKey<FormState>();
-  static final _emailController = TextEditingController();
-  static final _nameController = TextEditingController();
-  static final _passwordController = TextEditingController();
-  static final _confirmPasswordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _nameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
-  final _passwordFocusNode = FocusNode();
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _nameController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
   bool _isPasswordVisible = false;
 
   // Password conditions
@@ -133,7 +141,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         TextFormField(
                           controller: _passwordController,
                           obscureText: !_isPasswordVisible,
-                          focusNode: _passwordFocusNode,
                           onChanged: _validatePasswordStrength,
                           decoration: InputDecoration(
                             labelText: 'Mot de passe',

@@ -60,7 +60,6 @@ class AuthController {
       );
     }
   }
-
   static void logout(BuildContext context) {
     //delete all the files or just the currentUser in case of re-login
     isLoggedIn = false;
