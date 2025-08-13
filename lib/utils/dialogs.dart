@@ -5,7 +5,7 @@ class DialogService {
     return showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Error'),
+        title: const Text('Erreur'),
         content: Text(message),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),

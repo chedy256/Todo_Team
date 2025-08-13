@@ -8,13 +8,19 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _passwordController = TextEditingController();
+  static final _passwordController = TextEditingController();
+  static final TextEditingController _emailController = TextEditingController();
+  static final _formKey = GlobalKey<FormState>();
   bool _isPasswordVisible = false;
 
-  @override
-  void dispose() {
-    _passwordController.dispose();
-    super.dispose();
+  String? validateEmail(String? email) {
+    final regex = RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!regex.hasMatch(email ?? '') ||
+        (email != null &&
+            (email.isEmpty || email.contains('=') || email.contains(' ')))) {
+      return 'Entrez un email valide ';
+    }
+    return null;
   }
 
   @override
@@ -22,6 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Stack(
         children: [
+          //background
           Container(
             padding: EdgeInsets.symmetric(vertical: 30),
             width: double.infinity,
@@ -41,48 +48,78 @@ class _LoginScreenState extends State<LoginScreen> {
             left: 0,
             right: 0,
             top: 120,
-            child: Text(
-                  "Se connecter",
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 36,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
+            child: const Text(
+              "Se connecter",
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 36,
+                fontWeight: FontWeight.w700,
+              ),
+              textAlign: TextAlign.center,
+            ),
           ),
           Positioned(
             left: 24,
             right: 24,
             top: 250,
-            child: TextFormField(
-                  controller: _passwordController,
-                  obscureText: !_isPasswordVisible,
-                  decoration: InputDecoration(
-                    labelText: 'Mot de passe',
-                    hintText: 'Entrez votre mot de passe',
-                    prefixIcon: Icon(Icons.password_outlined),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _isPasswordVisible
-                            ? Icons.visibility
-                            : Icons.visibility_off,
+            child: Form(
+              key: _formKey,
+              child: Column(
+                spacing: 20,
+                children: [
+                  TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      labelText: 'Email',
+                      hintText: 'Enter votre address email',
+                      prefixIcon: Icon(Icons.email_outlined),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      onPressed: () => setState(
-                            () => _isPasswordVisible = !_isPasswordVisible,
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    validator: validateEmail,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
                   ),
-                ),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: !_isPasswordVisible,
+                    decoration: InputDecoration(
+                      labelText: 'Mot de passe',
+                      hintText: 'Entrez votre mot de passe',
+                      prefixIcon: const Icon(Icons.password_outlined),
+                      suffixIcon: IconButton(
+                        icon: _isPasswordVisible
+                            ? const Icon(Icons.visibility)
+                            : const Icon(Icons.visibility_off),
+                        onPressed: () => setState(
+                          () => _isPasswordVisible = !_isPasswordVisible,
+                        ),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    validator: (value) => (value == null || value.isEmpty)
+                        ? 'Entrez votre mot de passe'
+                        : null,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                  ),
+                ],
+              ),
+            ),
           ),
           Positioned(
             top: 750,
@@ -96,10 +133,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Container(
                     padding: const EdgeInsets.only(right: 12),
                     child: ElevatedButton.icon(
-                      onPressed: () => handleBack(context),
+                      onPressed: () => AuthController.goSignUp(context),
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       label: const Text(
-                        'Retour',
+                        "S'inscrire",
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -122,7 +159,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Container(
                     padding: const EdgeInsets.only(left: 12),
                     child: ElevatedButton(
-                      onPressed: () => AuthController.login(_passwordController.text, context), //authController.login(context),
+                      onPressed: () =>{
+                        if(_formKey.currentState!.validate())
+                        AuthController.login(
+                          _emailController.text,
+                          _passwordController.text,
+                          context,
+                        )
+                      }, //authController.login(context),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.lightBlueAccent.shade700,
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -132,10 +176,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         elevation: 4,
                         shadowColor: Colors.black26,
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
+                          Text(
                             'Se connecter',
                             style: TextStyle(
                               fontSize: 16,
@@ -157,8 +201,4 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-}
-
-void handleBack(BuildContext context) {//will be moved to uiController
-  Navigator.pushNamed(context, '/email');
 }

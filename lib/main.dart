@@ -3,18 +3,19 @@ import 'package:flutter/services.dart';
 import 'package:project/controllers/auth_controller.dart';
 import 'package:project/models/current_user.dart';
 
-import 'package:project/views/auth/email_screen.dart';
 import 'package:project/views/auth/login_screen.dart';
 import 'package:project/views/auth/sign_up_screen.dart';
 import 'package:project/views/home/tasks_screen.dart';
 
-late final CurrentUser currentUser;
+CurrentUser? currentUser;//= CurrentUser(id: 123, name: "name", email: "email", token: 122); //remove this line before commiting
+
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+
   runApp(const MyApp());
 }
 
@@ -30,11 +31,10 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'ToDo Team',
-      initialRoute: AuthController.isLoggedIn ? '/tasks':'/email',
+      initialRoute: AuthController.isLoggedIn ? '/tasks':'/login', //remove ! before commiting
       routes: {
-        '/email': (context) => const EmailScreen(),
-        '/signup': (context) => SignUpScreen(),
         '/login': (context) => const LoginScreen(),
+        '/signup': (context) => const SignUpScreen(),
         '/tasks': (context) => const TasksScreen(),
       },
     );
