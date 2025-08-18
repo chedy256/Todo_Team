@@ -5,7 +5,7 @@ import 'package:project/models/task_model.dart';
 import 'package:project/utils/utils.dart';
 import 'package:project/views/widgets/task_actions.dart';
 
-import '../../main.dart';
+import '../../controllers/auth_controller.dart';
 
 class ItemWidget extends StatefulWidget {
   final Task task;
@@ -26,35 +26,17 @@ class _ItemWidgetState extends State<ItemWidget> {
   void _startTimer() {
     _timer?.cancel(); // Cancel existing timer
 
-    final duration = _getUpdateInterval();
+    final duration = Duration(minutes: 1);
     _timer = Timer.periodic(duration, (timer) {
       if (mounted) {
         setState(() {});
         // Restart timer with new interval if time unit changed
-        _restartTimerIfNeeded();
+        final currentInterval = Duration(minutes: 1);
+        if (_timer != null && _shouldRestartTimer(currentInterval)) {
+          _startTimer();
+        }
       }
     });
-  }
-
-  Duration _getUpdateInterval() {
-    final now = DateTime.now();
-    final difference = widget.task.dueDate.difference(now);
-
-    if (difference.inDays > 0) {
-      return const Duration(hours: 1); // Update every hour for days
-    } else if (difference.inHours > 0) {
-      return const Duration(minutes: 1); // Update every minute for hours
-    } else {
-      return const Duration(seconds: 30); // Update every 30 seconds for minutes
-    }
-  }
-
-  void _restartTimerIfNeeded() {
-    final currentInterval = _getUpdateInterval();
-    // Restart timer if interval should change (e.g., from days to hours)
-    if (_timer != null && _shouldRestartTimer(currentInterval)) {
-      _startTimer();
-    }
   }
 
   bool _shouldRestartTimer(Duration newInterval) {
@@ -106,7 +88,7 @@ class _ItemWidgetState extends State<ItemWidget> {
                   Icons.circle,
                   color: (widget.task.isCompleted)
                       ? Colors.green
-                      : (widget.task.assigned == currentUser)
+                      : (widget.task.assigned == AuthController.currentUser)
                       ? Colors.red
                       : Colors.blue,
                 ),
