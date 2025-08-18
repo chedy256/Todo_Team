@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:project/models/task_model.dart';
-import 'package:project/services/dialogs_service.dart';
 
 import '../../main.dart';
 import '../../services/local_database_service.dart';
 
-class AddTaskScreen extends StatefulWidget {
-  const AddTaskScreen({super.key});
+class EditTaskScreen extends StatefulWidget {
+  final Task task;
+  const EditTaskScreen({super.key, required this.task});
   @override
-  State<StatefulWidget> createState() => _AddTaskScreenState();
+  State<StatefulWidget> createState() => _EditTaskScreenState();
 }
 
-class _AddTaskScreenState extends State<AddTaskScreen> {
-  Priority _priority = Priority.low;
-  final TextEditingController _titleController = TextEditingController(),
-      _descriptionController = TextEditingController(),
+class _EditTaskScreenState extends State<EditTaskScreen> {
+  final LocalDatabaseService databaseService = LocalDatabaseService.instance;
+  final TextEditingController _descriptionController = TextEditingController(),
       _dateController = TextEditingController(),
       _timeController = TextEditingController(),
       _assignedController = TextEditingController();
@@ -27,15 +26,16 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     _timeController.dispose();
     _dateController.dispose();
     _descriptionController.dispose();
-    _titleController.dispose();
+
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final LocalDatabaseService databaseService = LocalDatabaseService.instance;
+    final Task task = widget.task;
+    Priority priority = task.priority;
     return Scaffold(
-      appBar: AppBar(title: const Text('Creer une tâche')),
+      appBar: AppBar(title: const Text('Modifier la tâche')),
       body: Padding(
         padding: const EdgeInsets.all(12),
         child: SingleChildScrollView(
@@ -43,29 +43,30 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
             children: [
               const SizedBox(height: 10),
               TextField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Titre',
-                  labelStyle: TextStyle(
+                readOnly: true,
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  hintStyle: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),
+                  hintText: task.getTitle,
                 ),
               ),
               const SizedBox(height: 20),
               TextField(
                 controller: _descriptionController,
-                maxLines: null, // grows with content
-                minLines: 5, // minimum height
-                decoration: const InputDecoration(
+                maxLines: null,
+                minLines: 5,
+                decoration: InputDecoration(
                   labelText: 'Description',
-                  labelStyle: TextStyle(
+                  labelStyle: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),
+                  hintText: task.getDescription ,
                   alignLabelWithHint: true, // keeps label aligned at top
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 20),
@@ -79,37 +80,36 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 children: [
                   ChoiceChip(
                     label: const Text('Basse'),
-                    selected: _priority == Priority.low,
-                    selectedColor: Colors.grey.shade300,
+                    selected: priority == Priority.low,
+                    selectedColor: Colors.green.shade200,
                     onSelected: (_) {
                       setState(() {
-                        _priority = Priority.low;
+                        priority = Priority.low;
                       });
                     },
                   ),
                   ChoiceChip(
                     label: const Text('Moyenne'),
-                    selected: _priority == Priority.medium,
-                    selectedColor: Colors.orange.shade200,
+                    selected: priority == Priority.medium,
+                    selectedColor: Colors.orange.shade300,
                     onSelected: (_) {
                       setState(() {
-                        _priority = Priority.medium;
+                        priority = Priority.medium;
                       });
                     },
                   ),
                   ChoiceChip(
                     label: const Text('Haute'),
-                    selected: _priority == Priority.high,
+                    selected: priority == Priority.high,
                     selectedColor: Colors.red.shade400,
                     onSelected: (_) {
                       setState(() {
-                        _priority = Priority.high;
+                        priority = Priority.high;
                       });
                     },
                   ),
                 ],
               ),
-
               const SizedBox(height: 20),
               const Text(
                 "Assigner à",
@@ -121,9 +121,10 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 readOnly: true,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16), // can't be const
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   labelText: "Selectionnez la personne",
+                  hintText: task.assigned != null ? task.assigned?.name : 'personne',
                   labelStyle: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
@@ -155,24 +156,23 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      labelText: "Selectionnez la date",
-                      labelStyle: const TextStyle(
+                      hintText: '${task.dueDate.day}/${task.dueDate.month}/${task.dueDate.year}',
+                      hintStyle: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                     onTap: () async {
-                      DateTime? pickedDate = await showDatePicker(
+                      _pickedDate = await showDatePicker(
                         context: context,
                         initialDate: DateTime.now(),
                         firstDate: DateTime.now(),
                         lastDate: DateTime(2050),
                       );
-                      if (pickedDate != null) {
+                      if (_pickedDate != null) {
                         setState(() {
-                          _pickedDate = pickedDate;
                           _dateController.text =
-                              "${pickedDate.day.toString().padLeft(2, '0')}/${pickedDate.month.toString().padLeft(2, '0')}/${pickedDate.year}";
+                              "${_pickedDate!.day.toString().padLeft(2, '0')}/${_pickedDate!.month.toString().padLeft(2, '0')}/${_pickedDate!.year}";
                         });
                       }
                     },
@@ -185,22 +185,21 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      labelText: "Selectionnez l'heure",
-                      labelStyle: const TextStyle(
+                      hintText: '${task.dueDate.hour}:${task.dueDate.minute}',
+                      hintStyle: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                     onTap: () async {
-                      TimeOfDay? pickedTime = await showTimePicker(
+                      _pickedTime = await showTimePicker(
                         context: context,
                         initialTime: TimeOfDay.now(),
                       );
-                      if (pickedTime != null) {
+                      if (_pickedTime != null) {
                         setState(() {
-                          _pickedTime = pickedTime;
                           _timeController.text =
-                              "${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')}";
+                              "${_pickedTime!.hour.toString().padLeft(2, '0')}:${_pickedTime!.minute.toString().padLeft(2, '0')}";
                         });
                       }
                     },
@@ -209,42 +208,29 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () {
-                  if(_titleController.text.isEmpty){
-                    DialogService.showErrorDialog(
-                      context,
-                      "Le titre est obligatoire.",
-                    );
+                onPressed: () async {
+                  DateTime originalDueDate = task.dueDate;
+
+                  // Create new due date using picked values or original values
+                  final dueDate = DateTime(
+                    _pickedDate?.year ?? originalDueDate.year,
+                    _pickedDate?.month ?? originalDueDate.month,
+                    _pickedDate?.day ?? originalDueDate.day,
+                    _pickedTime?.hour ?? originalDueDate.hour,
+                    _pickedTime?.minute ?? originalDueDate.minute,
+                  );
+
+                  // Only update due date if it's different from original
+                  if (dueDate != originalDueDate) {
+                    task.dueDate = dueDate;
                   }
-                  else if (_pickedDate == null || _pickedTime == null) {
-                    DialogService.showErrorDialog(
-                      context,
-                      "Veuillez sélectionner une date et une heure valides.",
-                    );
-                  } else {
-                    final dueDate = DateTime(
-                      _pickedDate!.year,
-                      _pickedDate!.month,
-                      _pickedDate!.day,
-                      _pickedTime!.hour,
-                      _pickedTime!.minute,
-                    );
-                    databaseService.addTask(
-                      Task(
-                        title: _titleController.text,
-                        description: _descriptionController.text,
-                        priority: _priority,
-                        dueDate: dueDate,
-                        ownerId: currentUser!.getId,
-                        isCompleted: false,
-                        updatedAt: DateTime.now(),
-                        createdAt: DateTime.now(),
-                      ),
-                    );
-                    Navigator.pop(context, true);
-                  }
+                  task.priority = priority;
+                  task.updatedAt = DateTime.now();
+
+                  databaseService.updateTask(task);
+                  Navigator.pop(context, true);
                 },
-                child: const Text('Ajouter la tâche'),
+                child: const Text('Changer la tâche'),
               ),
               const SizedBox(height: 20),
             ],
@@ -264,7 +250,7 @@ class CustomSearchDelegate extends SearchDelegate<String> {
     'yassine',
     'bilel',
     'mohamed',
-  ]; //will be replaced with user.name to access user.id
+  ];//TODO Refactor: will be replaced with user.name to access user.id
   @override
   List<Widget> buildActions(BuildContext context) {
     return [

@@ -3,6 +3,7 @@ import 'package:project/main.dart';
 import 'package:project/services/dialogs_service.dart';
 
 import '../../models/task_model.dart';
+import '../../services/local_database_service.dart';
 import '../home/edit_task_screen.dart';
 
 class TaskActions extends StatefulWidget {
@@ -17,6 +18,7 @@ class TaskActions extends StatefulWidget {
 }
 
 class _TaskActionsState extends State<TaskActions> {
+  final LocalDatabaseService databaseService = LocalDatabaseService.instance;
   void _handleTaskChange() {
     widget.onTaskChanged
         ?.call(); // This will trigger timer restart in ItemWidget
@@ -25,7 +27,6 @@ class _TaskActionsState extends State<TaskActions> {
 
   @override
   Widget build(BuildContext context) {
-    // Update your onTap methods to call _handleTaskChange()
     return SizedBox(
       height: 250,
       width: double.infinity,
@@ -65,7 +66,15 @@ class _TaskActionsState extends State<TaskActions> {
                           ),
                         ),
                       ),
-                      onTap: () {},
+                      onTap: () async{
+                        if (await DialogService.showConfirmationDialog(context, "Confirmation", 'êtes-vous sûr de vouloir supprimer cette tâche ?')) {
+                          TaskActions.isBottomSheetOpen = false;
+                          databaseService.deleteTask(widget.task.getId);
+                          _handleTaskChange();
+                        } else {
+                          return;
+                        }
+                      },
                     ),
                     InkWell(
                       child: SizedBox(
@@ -122,6 +131,7 @@ class _TaskActionsState extends State<TaskActions> {
                       ),
                       onTap: () {
                         widget.task.setCompleted(false);
+                        databaseService.updateTask(widget.task);
                         _handleTaskChange();
                       },
                     )
@@ -150,6 +160,7 @@ class _TaskActionsState extends State<TaskActions> {
                       ),
                       onTap: () {
                         widget.task.setCompleted(true);
+                        databaseService.updateTask(widget.task);
                         _handleTaskChange();
                       },
                     )
@@ -180,6 +191,7 @@ class _TaskActionsState extends State<TaskActions> {
                       ),
                       onTap: () {
                         widget.task.setAssignedId(currentUser);
+                        databaseService.updateTask(widget.task);
                         _handleTaskChange();
                       },
                     ),
