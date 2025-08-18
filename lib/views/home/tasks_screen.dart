@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:project/controllers/auth_controller.dart';
-//import 'package:project/main.dart';
-//import 'package:project/models/user_model.dart';
 
 import '../../services/local_database_service.dart';
 import '../widgets/item_widget.dart';
-//import '../../models/task_model.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
@@ -133,93 +130,6 @@ class _TasksScreenState extends State<TasksScreen> {
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 12),
                 child: _tasksList()
-                /*Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  spacing: 10,
-                  children: [
-                    ItemWidget(
-                      task: Task(
-                        title: 'tâche : terminée et non créée par lui',
-                        assigned: currentUser,
-                        isCompleted: true,
-                        ownerId: 123,
-                        description:
-                            "description de la tâche : terminée et non créée par lui",
-                        priority: Priority.high,
-                        dueDate: DateTime.now().add(const Duration(days: 3)),
-                        updatedAt: DateTime.now(),
-                        createdAt: DateTime.now(),
-                      ),
-                    ),
-                    ItemWidget(
-                      task: Task(
-                        title: "tâche : terminée et créée par lui",
-                        assigned: currentUser,
-                        isCompleted: true,
-                        description: "description de la tâche",
-                        ownerId: currentUser!.id,
-                        priority: Priority.high,
-                        dueDate: DateTime.now().add(const Duration(days: 3)),
-                        updatedAt: DateTime.now(),
-                        createdAt: DateTime.now(),
-                      ),
-                    ),
-                    ItemWidget(
-                      task: Task(
-                        title:
-                            "tâche : non terminée et assignée qlq d'autre dont il est le owner",
-                        assigned: User( id: 10,name: 'name', email: 'email'),
-                        isCompleted: false,
-                        description: "description de la tâche",
-                        ownerId: currentUser!.id,
-                        priority: Priority.medium,
-                        dueDate: DateTime.now().add(const Duration(hours: 3)),
-                        updatedAt: DateTime.now(),
-                        createdAt: DateTime.now(),
-                      ),
-                    ),
-                    ItemWidget(
-                      task: Task(
-                        title: "tâche : non terminée et assignée à lui même",
-                        assigned: currentUser,
-                        isCompleted: false,
-                        description: '',
-                        ownerId: currentUser!.id,
-                        priority: Priority.low,
-                        dueDate: DateTime.now().add(const Duration(minutes: 3)),
-                        updatedAt: DateTime.now(),
-                        createdAt: DateTime.now(),
-                      ),
-                    ),
-                    ItemWidget(
-                      task: Task(
-                        title: "tâche : non terminée et assignée à lui (crée par qlq'un d'autre)",
-                        assigned: currentUser,
-                        isCompleted: false,
-                        description: '',
-                        ownerId:  124,
-                        priority: Priority.low,
-                        dueDate: DateTime.now().add(const Duration(minutes: 3)),
-                        updatedAt: DateTime.now(),
-                        createdAt: DateTime.now(),
-                      ),
-                    ),
-                    ItemWidget(
-                      task: Task(
-                        title: "tâche : non terminée et non assignée",
-                        assigned: null,
-                        isCompleted: false,
-                        description: 'description de la tâche',
-                        ownerId: currentUser!.id,
-                        priority: Priority.low,
-                        dueDate: DateTime.now(),
-                        updatedAt: DateTime.now(),
-                        createdAt: DateTime.now(),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                ),*/
               ),
             ),
           ],

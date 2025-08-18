@@ -5,6 +5,7 @@ import 'package:project/models/current_user.dart';
 
 import 'package:project/views/auth/login_screen.dart';
 import 'package:project/views/auth/sign_up_screen.dart';
+import 'package:project/views/home/add_task_screen.dart';
 import 'package:project/views/home/tasks_screen.dart';
 
 CurrentUser? currentUser;//= CurrentUser(id: 123, name: "name", email: "email", token: 122); //remove this line before commiting
@@ -36,6 +37,7 @@ class _MyAppState extends State<MyApp> {
         '/login': (context) => const LoginScreen(),
         '/signup': (context) => const SignUpScreen(),
         '/tasks': (context) => const TasksScreen(),
+        '/add_task': (context) => const AddTaskScreen(),
       },
     );
   }

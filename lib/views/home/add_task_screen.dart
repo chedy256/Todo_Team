@@ -57,7 +57,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               TextField(
                 controller: _descriptionController,
                 maxLines: null, // grows with content
-                minLines: 5, // minimum height
+                minLines: 5,
                 decoration: const InputDecoration(
                   labelText: 'Description',
                   labelStyle: TextStyle(
@@ -121,7 +121,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 readOnly: true,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16), // can't be const
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   labelText: "Selectionnez la personne",
                   labelStyle: const TextStyle(

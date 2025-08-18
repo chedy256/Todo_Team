@@ -66,8 +66,12 @@ class _TaskActionsState extends State<TaskActions> {
                           ),
                         ),
                       ),
-                      onTap: () async{
-                        if (await DialogService.showConfirmationDialog(context, "Confirmation", 'êtes-vous sûr de vouloir supprimer cette tâche ?')) {
+                      onTap: () async {
+                        if (await DialogService.showConfirmationDialog(
+                          context,
+                          "Confirmation",
+                          'êtes-vous sûr de vouloir supprimer cette tâche ?',
+                        )) {
                           TaskActions.isBottomSheetOpen = false;
                           databaseService.deleteTask(widget.task.getId);
                           _handleTaskChange();
@@ -98,7 +102,13 @@ class _TaskActionsState extends State<TaskActions> {
                           ),
                         ),
                       ),
-                      onTap: () => Navigator.push(context,MaterialPageRoute(builder: (context)=> EditTaskScreen(task: widget.task))),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              EditTaskScreen(task: widget.task),
+                        ),
+                      ),
                     ),
                   ],
                 )
