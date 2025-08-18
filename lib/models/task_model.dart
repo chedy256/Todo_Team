@@ -1,27 +1,36 @@
+import 'package:project/models/user_model.dart';
+
 enum Priority { low, medium, high }
 
 class Task {
-  final int id,ownerId;
-  final String title;
+  final int? id;
+  final int ownerId;
+  late final String title;
   String description;
   Priority priority;
   bool isCompleted = false;
-  int? assignedId;
+  User? assigned;
   DateTime dueDate, updatedAt;
   late final DateTime createdAt;
   Task({
-    required this.id,
+    this.id,
     required this.title,
     required this.description,
     required this.priority,
-    required this.isCompleted,
     required this.dueDate,
     required this.ownerId,
-    this.assignedId,
+    this.assigned,
+    required this.isCompleted,
     required this.updatedAt,
     required this.createdAt,
   });
-  void setAssignedId(int? id)=>assignedId = id;
+  void setAssignedId(User? user)=>assigned = user;
   void setCompleted(bool value)=>isCompleted = value;
   set setDescription(String desc) => description = desc;
+  String get getTitle => title;
+  String get getDescription => description;
+  int get getOwnerId => ownerId;
+  int get getId => id!;
+  User? get getAssigned => assigned;
+  DateTime get getDueDate => dueDate;
 }
