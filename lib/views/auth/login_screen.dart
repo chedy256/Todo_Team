@@ -12,6 +12,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isPasswordVisible = false;
+  final AuthController _authController = AuthController.instance;
 
   @override
   void dispose() {
@@ -140,7 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Container(
                     padding: const EdgeInsets.only(right: 12),
                     child: ElevatedButton.icon(
-                      onPressed: () => AuthController.goSignUp(context),
+                      onPressed: () => _authController.goSignUp(context),
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       label: const Text(
                         "S'inscrire",
@@ -168,7 +169,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: ElevatedButton(
                       onPressed: () =>{
                         if(_formKey.currentState!.validate())
-                        AuthController.login(
+                          _authController.login(
                           _emailController.text,
                           _passwordController.text,
                           context,

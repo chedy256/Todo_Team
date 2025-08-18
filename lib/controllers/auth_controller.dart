@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:project/models/current_user.dart';
-import 'package:project/utils/dialogs.dart';
+import 'package:project/services/dialogs_service.dart';
 
 import '../main.dart';
 
 class AuthController {
+  static final AuthController instance = AuthController._constructor();
 
   static bool isLoggedIn = false;
+  AuthController._constructor();
 
-  static Future<void> login(String email,String password, BuildContext context) async {
+  Future<void> login(String email,String password, BuildContext context) async {
     //loading Circle
     showDialog(
       context: context,
@@ -34,7 +36,7 @@ class AuthController {
       }
     }
   }
-  static Future<void> signup(
+  Future<void> signup(
       String email,
       String password,
       String name,
@@ -60,16 +62,16 @@ class AuthController {
       );
     }
   }
-  static void logout(BuildContext context) {
+  void logout(BuildContext context) {
     //delete all the files or just the currentUser in case of re-login
     isLoggedIn = false;
     currentUser=null;
     Navigator.pushReplacementNamed(context, '/login');
   }
-  static void goSignUp(BuildContext context) {
+  void goSignUp(BuildContext context) {
     Navigator.pushReplacementNamed(context, '/signup');
   }
-  static void goLogin(BuildContext context) {
+  void goLogin(BuildContext context) {
     Navigator.pushReplacementNamed(context,'/login');
   }
 }

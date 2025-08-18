@@ -13,6 +13,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final AuthController _authController = AuthController.instance;
 
   @override
   void dispose() {
@@ -224,7 +225,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   child: Container(
                     padding: const EdgeInsets.only(right: 12),
                     child: ElevatedButton.icon(
-                      onPressed: () => AuthController.goLogin(context),
+                      onPressed: () => _authController.goLogin(context),
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       label: const Text(
                         'Se Connecter',
@@ -256,7 +257,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             _hasNumber &&
                             _hasUppercase &&
                             _hasSpecialChar)
-                          AuthController.signup(
+                          _authController.signup(
                             _emailController.text,
                             _passwordController.text,
                             _nameController.text,
