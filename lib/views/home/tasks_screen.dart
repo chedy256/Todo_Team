@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:project/controllers/auth_controller.dart';
+//import 'package:project/main.dart';
+//import 'package:project/models/user_model.dart';
 
+import '../../services/local_database_service.dart';
 import '../widgets/item_widget.dart';
-import '../../models/task_model.dart';
+//import '../../models/task_model.dart';
 
 class TasksScreen extends StatefulWidget {
-
   const TasksScreen({super.key});
   @override
   State<StatefulWidget> createState() => _TasksScreenState();
 }
 
 class _TasksScreenState extends State<TasksScreen> {
+  final AuthController _authController = AuthController.instance;
+  final LocalDatabaseService databaseService = LocalDatabaseService.instance;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -20,7 +24,7 @@ class _TasksScreenState extends State<TasksScreen> {
         title: Text('ToDo Team', style: TextStyle(fontWeight: FontWeight.bold)),
         leading: IconButton(
           padding: EdgeInsets.all(5),
-          onPressed: () => AuthController.logout(context),
+          onPressed: () => _authController.logout(context),
           icon: Icon(Icons.logout_outlined, color: Colors.black),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.amberAccent.shade100,
@@ -118,43 +122,42 @@ class _TasksScreenState extends State<TasksScreen> {
                         ],
                       ),
                     ),
-                    IconButton(
-                      onPressed: () {},
-                      icon: const Icon(Icons.filter_list, size: 26),
-                    ),
+                    //IconButton(onPressed: () {}, icon: const Icon(Icons.filter_list, size: 26),),//TODO: add filter
                   ],
                 ),
               ],
             ),
             SizedBox(height: 5),
+            SizedBox(height: 5),
             Expanded(
-              child: SingleChildScrollView(
+              child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 12),
-                child: Column(
+                child: _tasksList()
+                /*Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   spacing: 10,
                   children: [
                     ItemWidget(
                       task: Task(
                         title: 'tâche : terminée et non créée par lui',
-                        assignedId: 123,
+                        assigned: currentUser,
                         isCompleted: true,
-                        id: 1,
-                        ownerId: 101,
-                        description: "description de la tâche : terminée et non créée par lui",
+                        ownerId: 123,
+                        description:
+                            "description de la tâche : terminée et non créée par lui",
                         priority: Priority.high,
                         dueDate: DateTime.now().add(const Duration(days: 3)),
                         updatedAt: DateTime.now(),
                         createdAt: DateTime.now(),
                       ),
-                    ),ItemWidget(
+                    ),
+                    ItemWidget(
                       task: Task(
                         title: "tâche : terminée et créée par lui",
-                        assignedId: 123,
+                        assigned: currentUser,
                         isCompleted: true,
-                        id: 1,
                         description: "description de la tâche",
-                        ownerId: 123,
+                        ownerId: currentUser!.id,
                         priority: Priority.high,
                         dueDate: DateTime.now().add(const Duration(days: 3)),
                         updatedAt: DateTime.now(),
@@ -165,11 +168,10 @@ class _TasksScreenState extends State<TasksScreen> {
                       task: Task(
                         title:
                             "tâche : non terminée et assignée qlq d'autre dont il est le owner",
-                        assignedId: 120,
+                        assigned: User( id: 10,name: 'name', email: 'email'),
                         isCompleted: false,
-                        id: 1,
                         description: "description de la tâche",
-                        ownerId: 123,
+                        ownerId: currentUser!.id,
                         priority: Priority.medium,
                         dueDate: DateTime.now().add(const Duration(hours: 3)),
                         updatedAt: DateTime.now(),
@@ -179,11 +181,23 @@ class _TasksScreenState extends State<TasksScreen> {
                     ItemWidget(
                       task: Task(
                         title: "tâche : non terminée et assignée à lui même",
-                        assignedId: 123,
+                        assigned: currentUser,
                         isCompleted: false,
-                        id: 1,
                         description: '',
-                        ownerId: 123,
+                        ownerId: currentUser!.id,
+                        priority: Priority.low,
+                        dueDate: DateTime.now().add(const Duration(minutes: 3)),
+                        updatedAt: DateTime.now(),
+                        createdAt: DateTime.now(),
+                      ),
+                    ),
+                    ItemWidget(
+                      task: Task(
+                        title: "tâche : non terminée et assignée à lui (crée par qlq'un d'autre)",
+                        assigned: currentUser,
+                        isCompleted: false,
+                        description: '',
+                        ownerId:  124,
                         priority: Priority.low,
                         dueDate: DateTime.now().add(const Duration(minutes: 3)),
                         updatedAt: DateTime.now(),
@@ -193,11 +207,10 @@ class _TasksScreenState extends State<TasksScreen> {
                     ItemWidget(
                       task: Task(
                         title: "tâche : non terminée et non assignée",
-                        assignedId: null,
+                        assigned: null,
                         isCompleted: false,
-                        id: 1,
                         description: 'description de la tâche',
-                        ownerId: 123,
+                        ownerId: currentUser!.id,
                         priority: Priority.low,
                         dueDate: DateTime.now(),
                         updatedAt: DateTime.now(),
@@ -206,17 +219,38 @@ class _TasksScreenState extends State<TasksScreen> {
                     ),
                     const SizedBox(height: 24),
                   ],
-                ),
+                ),*/
               ),
             ),
           ],
         ),
       ),
-      floatingActionButton:
-      FloatingActionButton(
-      onPressed: (){},
-      child: const Icon(Icons.add),
-    ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.pushNamed(context, '/add_task'),
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+  Widget _tasksList () {
+     return FutureBuilder(
+      future: databaseService.getTasks(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Erreur : ${snapshot.error}'));
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text('Aucune tâche trouvée.'));
+        } else {
+          final tasks = snapshot.data!;
+          return ListView.builder(
+            itemCount: tasks.length,
+            itemBuilder: (context, index) {
+              return ItemWidget(task: tasks[index]);
+            },
+          );
+        }
+      },
     );
   }
 }

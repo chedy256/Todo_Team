@@ -1,17 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:project/main.dart';
-import 'package:project/views/widgets/dialogs.dart';
+import 'package:project/services/dialogs_service.dart';
 
 import '../../models/task_model.dart';
+import '../home/edit_task_screen.dart';
 
-class TaskActions extends StatelessWidget {
+class TaskActions extends StatefulWidget {
   final Task task;
+  final VoidCallback? onTaskChanged;
   static bool isBottomSheetOpen = false;
-  const TaskActions({super.key, required this.task});
+
+  const TaskActions({super.key, required this.task, this.onTaskChanged});
+
+  @override
+  State<TaskActions> createState() => _TaskActionsState();
+}
+
+class _TaskActionsState extends State<TaskActions> {
+  void _handleTaskChange() {
+    widget.onTaskChanged
+        ?.call(); // This will trigger timer restart in ItemWidget
+    Navigator.pop(context);
+  }
 
   @override
   Widget build(BuildContext context) {
-    isBottomSheetOpen = true;
+    // Update your onTap methods to call _handleTaskChange()
     return SizedBox(
       height: 250,
       width: double.infinity,
@@ -20,12 +34,12 @@ class TaskActions extends StatelessWidget {
         children: [
           IconButton(
             onPressed: () => {
-              isBottomSheetOpen = false,
+              TaskActions.isBottomSheetOpen = false,
               Navigator.of(context).pop(),
             },
             icon: const Icon(Icons.close, size: 30),
           ),
-          (currentUser?.id == task.ownerId)
+          (currentUser!.id == widget.task.ownerId)
               ? Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -75,7 +89,7 @@ class TaskActions extends StatelessWidget {
                           ),
                         ),
                       ),
-                      onTap: () {},
+                      onTap: () => Navigator.push(context,MaterialPageRoute(builder: (context)=> EditTaskScreen(task: widget.task))),
                     ),
                   ],
                 )
@@ -83,7 +97,7 @@ class TaskActions extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              task.isCompleted
+              widget.task.isCompleted
                   ? InkWell(
                       child: SizedBox(
                         width: 150,
@@ -106,12 +120,12 @@ class TaskActions extends StatelessWidget {
                           ),
                         ),
                       ),
-                      onTap: () =>{
-                        task.setCompleted(false),
-                        Navigator.pop(context)
+                      onTap: () {
+                        widget.task.setCompleted(false);
+                        _handleTaskChange();
                       },
                     )
-                  : task.assignedId != null
+                  : widget.task.assigned != null
                   ? InkWell(
                       child: SizedBox(
                         width: 150,
@@ -134,9 +148,9 @@ class TaskActions extends StatelessWidget {
                           ),
                         ),
                       ),
-                      onTap: () =>{
-                        task.setCompleted(true),
-                        Navigator.pop(context)
+                      onTap: () {
+                        widget.task.setCompleted(true);
+                        _handleTaskChange();
                       },
                     )
                   : InkWell(
@@ -164,9 +178,9 @@ class TaskActions extends StatelessWidget {
                           ),
                         ),
                       ),
-                      onTap: () => {
-                        task.setAssignedId(currentUser?.id),
-                        Navigator.pop(context)
+                      onTap: () {
+                        widget.task.setAssignedId(currentUser);
+                        _handleTaskChange();
                       },
                     ),
               InkWell(
@@ -190,7 +204,7 @@ class TaskActions extends StatelessWidget {
                 onTap: () => DialogService.showInfoDialog(
                   context,
                   'Description',
-                  task.description,
+                  widget.task.description,
                 ),
               ),
             ],
