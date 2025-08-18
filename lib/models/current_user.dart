@@ -5,5 +5,5 @@ class CurrentUser extends User{
   late final token;
 
   CurrentUser({required super.id, required super.name, required super.email, required this.token});//get from auth
-  get getId => id;
+
 }

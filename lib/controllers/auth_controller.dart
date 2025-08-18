@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:project/models/current_user.dart';
 import 'package:project/services/dialogs_service.dart';
 import 'package:project/services/secure_storage.dart';
 
+import '../models/current_user.dart';
+import '../models/user_model.dart';
+
 class AuthController {
   static final AuthController instance = AuthController._constructor();
-  static CurrentUser? currentUser;
+  static User? currentUser;
   final SecureStorage secureStorage = SecureStorage.instance;
   AuthController._constructor();
 
@@ -22,8 +24,8 @@ class AuthController {
     if (context.mounted) {
       Navigator.of(context).pop();
       if ( email=='user@gmail.com' && password == 'admin') {
-        currentUser=CurrentUser(id: 123, name: 'admin', email: email, token: 122);
-        secureStorage.writeCurrentUser(currentUser!);
+        currentUser=User(id: 123, name: 'admin', email: email);
+        secureStorage.writeCurrentUser(CurrentUser(id: currentUser!.getId, name: "admin", email: email, token: 100));
         Navigator.pushNamedAndRemoveUntil(
           context,
           '/tasks',
@@ -49,8 +51,8 @@ class AuthController {
     );
     // Sign up logic
     await Future.delayed(Duration(seconds: 1));
-    currentUser=CurrentUser(id: 123, name: name, email: email, token: 122);
-    secureStorage.writeCurrentUser(currentUser!);
+    currentUser=User(id: 123, name: name, email: email);
+    secureStorage.writeCurrentUser(CurrentUser(id: currentUser!.getId, name: name, email: email, token: 100));
 
     if (context.mounted) {
       Navigator.of(context).pop();

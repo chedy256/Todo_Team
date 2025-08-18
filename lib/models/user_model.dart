@@ -2,6 +2,7 @@ class User {
   final int id;
   final String name,email;
   User({required this.id ,required this.name,required this.email});
+  int get getId => id;
   String get getName => name;
   String get getEmail => email;
   //TODO add JSON factory : add the user id
