@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:project/models/current_user.dart';
 import 'package:project/services/dialogs_service.dart';
-
-import '../main.dart';
+import 'package:project/services/secure_storage.dart';
 
 class AuthController {
   static final AuthController instance = AuthController._constructor();
-
-  static bool isLoggedIn = false;
+  static CurrentUser? currentUser;
+  final SecureStorage secureStorage = SecureStorage.instance;
   AuthController._constructor();
 
-  Future<void> login(String email,String password, BuildContext context) async {
+    Future<void> login(String email,String password, BuildContext context) async {
     //loading Circle
     showDialog(
       context: context,
@@ -23,8 +22,8 @@ class AuthController {
     if (context.mounted) {
       Navigator.of(context).pop();
       if ( email=='user@gmail.com' && password == 'admin') {
-        currentUser = CurrentUser(id: 123, name: 'admin', email: email, token: 122);
-        isLoggedIn = true;
+        currentUser=CurrentUser(id: 123, name: 'admin', email: email, token: 122);
+        secureStorage.writeCurrentUser(currentUser!);
         Navigator.pushNamedAndRemoveUntil(
           context,
           '/tasks',
@@ -50,8 +49,8 @@ class AuthController {
     );
     // Sign up logic
     await Future.delayed(Duration(seconds: 1));
-    currentUser = CurrentUser(id: 123, name: name, email: email, token: 122);
-    isLoggedIn = true;
+    currentUser=CurrentUser(id: 123, name: name, email: email, token: 122);
+    secureStorage.writeCurrentUser(currentUser!);
 
     if (context.mounted) {
       Navigator.of(context).pop();
@@ -63,9 +62,7 @@ class AuthController {
     }
   }
   void logout(BuildContext context) {
-    //delete all the files or just the currentUser in case of re-login
-    isLoggedIn = false;
-    currentUser=null;
+    secureStorage.deleteCurrentUser();
     Navigator.pushReplacementNamed(context, '/login');
   }
   void goSignUp(BuildContext context) {

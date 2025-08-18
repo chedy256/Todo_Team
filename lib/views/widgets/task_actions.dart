@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:project/main.dart';
 import 'package:project/services/dialogs_service.dart';
 
+import '../../controllers/auth_controller.dart';
 import '../../models/task_model.dart';
 import '../../services/local_database_service.dart';
 import '../home/edit_task_screen.dart';
@@ -40,7 +40,7 @@ class _TaskActionsState extends State<TaskActions> {
             },
             icon: const Icon(Icons.close, size: 30),
           ),
-          (currentUser!.id == widget.task.ownerId)
+          (AuthController.currentUser!.id == widget.task.ownerId)
               ? Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -200,7 +200,7 @@ class _TaskActionsState extends State<TaskActions> {
                         ),
                       ),
                       onTap: () {
-                        widget.task.setAssignedId(currentUser);
+                        widget.task.setAssignedId(AuthController.currentUser);
                         databaseService.updateTask(widget.task);
                         _handleTaskChange();
                       },

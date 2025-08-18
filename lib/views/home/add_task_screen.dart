@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project/controllers/auth_controller.dart';
 import 'package:project/models/task_model.dart';
 import 'package:project/services/dialogs_service.dart';
 
@@ -235,7 +236,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                         description: _descriptionController.text,
                         priority: _priority,
                         dueDate: dueDate,
-                        ownerId: currentUser!.getId,
+                        ownerId: AuthController.currentUser!.getId,
                         isCompleted: false,
                         updatedAt: DateTime.now(),
                         createdAt: DateTime.now(),
@@ -258,7 +259,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
 class CustomSearchDelegate extends SearchDelegate<String> {
   List<String> searchTerms = [
     'personne',
-    'Moi même: ${currentUser?.name}',
+    'Moi même: ${AuthController.currentUser?.name}',
     'chedy',
     'admin',
     'yassine',

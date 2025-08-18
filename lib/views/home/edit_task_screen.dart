@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project/models/task_model.dart';
 
+import '../../controllers/auth_controller.dart';
 import '../../main.dart';
 import '../../services/local_database_service.dart';
 
@@ -244,7 +245,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
 class CustomSearchDelegate extends SearchDelegate<String> {
   List<String> searchTerms = [
     'personne',
-    'Moi même: ${currentUser?.name}',
+    'Moi même: ${AuthController.currentUser?.name}',
     'chedy',
     'admin',
     'yassine',
