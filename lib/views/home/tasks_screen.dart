@@ -226,7 +226,7 @@ class _TasksScreenState extends State<TasksScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.pushNamed(context, '/add_task'),
+        onPressed: () =>Navigator.pushNamed(context, '/add_task'),
         child: const Icon(Icons.add),
       ),
     );

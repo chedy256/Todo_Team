@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:project/models/task_model.dart';
 import 'package:project/utils/utils.dart';
@@ -13,6 +15,68 @@ class ItemWidget extends StatefulWidget {
 
 }
 class _ItemWidgetState extends State<ItemWidget> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer?.cancel(); // Cancel existing timer
+
+    final duration = _getUpdateInterval();
+    _timer = Timer.periodic(duration, (timer) {
+      if (mounted) {
+        setState(() {});
+        // Restart timer with new interval if time unit changed
+        _restartTimerIfNeeded();
+      }
+    });
+  }
+
+  Duration _getUpdateInterval() {
+    final now = DateTime.now();
+    final difference = widget.task.dueDate.difference(now);
+
+    if (difference.inDays > 0) {
+      return const Duration(hours: 1); // Update every hour for days
+    } else if (difference.inHours > 0) {
+      return const Duration(minutes: 1); // Update every minute for hours
+    } else {
+      return const Duration(seconds: 30); // Update every 30 seconds for minutes
+    }
+  }
+
+  void _restartTimerIfNeeded() {
+    final currentInterval = _getUpdateInterval();
+    // Restart timer if interval should change (e.g., from days to hours)
+    if (_timer != null && _shouldRestartTimer(currentInterval)) {
+      _startTimer();
+    }
+  }
+
+  bool _shouldRestartTimer(Duration newInterval) {
+    final now = DateTime.now();
+    final difference = widget.task.dueDate.difference(now);
+
+    // Check if we've crossed a time boundary
+    if (difference.inDays == 0 && newInterval != const Duration(minutes: 1)) {
+      return true; // Switched from days to hours
+    }
+    if (difference.inHours == 0 && newInterval != const Duration(seconds: 30)) {
+      return true; // Switched from hours to minutes
+    }
+    return false;
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
@@ -36,13 +100,13 @@ class _ItemWidgetState extends State<ItemWidget> {
             Row(
               spacing: 10,
               children: [
-                (widget.task.assignedId == null)
+                (widget.task.assigned == null)
                     ? Icon(Icons.circle_outlined, color: Colors.black)
                     : Icon(
                   Icons.circle,
                   color: (widget.task.isCompleted)
                       ? Colors.green
-                      : (widget.task.assignedId == currentUser!.id)
+                      : (widget.task.assigned == currentUser)
                       ? Colors.red
                       : Colors.blue,
                 ),
@@ -68,9 +132,24 @@ class _ItemWidgetState extends State<ItemWidget> {
         ),),
       ),
       ),
-      onTap: ()=> {
-        TaskActions.isBottomSheetOpen = true,
-        showBottomSheet(context: context,backgroundColor: Colors.grey.shade200, builder: (BuildContext context){ return TaskActions(task: widget.task);})
+      onTap: () async {
+        TaskActions.isBottomSheetOpen = true;
+      showBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey.shade200,
+      builder: (BuildContext context) {
+        return TaskActions(
+          task: widget.task,
+          onTaskChanged: () {
+            if (mounted) {
+              setState(() {}); // This will trigger timer restart
+              _startTimer(); // Restart timer with new interval
+            }
+          },
+        );
+      },
+    );
+    TaskActions.isBottomSheetOpen = false;
       }
     );
   }
