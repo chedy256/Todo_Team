@@ -70,7 +70,6 @@ class NotifService {
   }) async {
     if (!_isInitialized) {
       await initNotification();
-      _isInitialized = true;
     }
     await notificationPlugin.show(id, title, body, notificationDetails());
   }
@@ -87,19 +86,34 @@ class NotifService {
       _isInitialized = true;
     }
 
-    final now = DateTime.now();
-    final diff = dueDate.difference(now);
-    
-    if(!diff.isNegative && diff.inHours <=24) {
-    await notificationPlugin.zonedSchedule(
-      taskId,
-      "Date Delai de la tâche s'approche",
-      'La tâche "$taskTitle" se termine en ${Utils.timeLeft(dueDate)}',
-      tz.TZDateTime.from(dueDate, tz.local),
-      notificationDetails(),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      matchDateTimeComponents: DateTimeComponents.dateAndTime,
-    );
+    final diff = dueDate.difference(DateTime.now());
+
+    if (diff.isNegative) {
+      return;
+    } else {
+      if (diff.inHours < 24) {
+        await showNotification(
+          id: taskId,
+          title: "Date Delai de la tâche s'approche",
+          body:
+              'La tâche "$taskTitle" se termine en ${Utils.timeLeft(dueDate)}',
+        );
+      } else {
+        final scheduledTime = tz.TZDateTime.now(tz.local).add(
+          Duration(
+            hours: diff.inHours-24,
+            minutes: diff.inMinutes % 60,
+          ),
+        );
+        await notificationPlugin.zonedSchedule(
+          taskId,
+          "Date Delai de la tâche s'approche",
+          'La tâche "$taskTitle" se termine en ${Utils.timeLeft(dueDate)}',
+          scheduledTime,
+          notificationDetails(),
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        );
+      }
     }
   }
 
@@ -107,7 +121,6 @@ class NotifService {
   Future<void> cancelNotification(int id) async {
     if (!_isInitialized) {
       await initNotification();
-      _isInitialized = true;
     }
     await notificationPlugin.cancel(id);
   }
