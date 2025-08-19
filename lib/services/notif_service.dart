@@ -1,5 +1,4 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/standalone.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 import '../utils/utils.dart';
@@ -100,7 +99,7 @@ class NotifService {
               'La tâche "$taskTitle" se termine en ${Utils.timeLeft(dueDate)}',
         );
       } else {
-        final scheduledTime = TZDateTime.now(tz.local).add(
+        final scheduledTime = tz.TZDateTime.now(tz.local).add(
           Duration(
             hours: diff.inHours-24,
             minutes: diff.inMinutes % 60,
