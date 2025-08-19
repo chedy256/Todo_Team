@@ -17,7 +17,7 @@ class SecureStorage {
     );
   }
   // This function can be used to retrieve the current user from secure storage
-  readCurrentUser() async{
+  Future <CurrentUser?> readCurrentUser() async{
     final value = await storage.read(key: 'currentUser');
     if (value != null) {
       final userData = value.split(',');

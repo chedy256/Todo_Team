@@ -38,7 +38,7 @@ class LocalDatabaseService {
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE $_tasksTableName (
-            $_tasksIdColumn INTEGER PRIMARY KEY,
+            $_tasksIdColumn INTEGER PRIMARY KEY AUTOINCREMENT,
             $_tasksTitleColumn TEXT NOT NULL,
             $_tasksDescriptionColumn TEXT NOT NULL,
             $_tasksPriorityColumn INTEGER DEFAULT 0 NOT NULL,
@@ -55,9 +55,9 @@ class LocalDatabaseService {
     return database;
   }
 
-  void addTask(Task task) async {
+  Future<int> addTask(Task task) async {
     final db = await database;
-    await db.insert(_tasksTableName, {
+    final id = await db.insert(_tasksTableName, {
       _tasksTitleColumn: task.title,
       _tasksDescriptionColumn: task.description,
       _tasksPriorityColumn: task.priority.index,
@@ -68,8 +68,10 @@ class LocalDatabaseService {
       _tasksCreatedAtColumn: task.createdAt.millisecondsSinceEpoch,
       _tasksUpdatedAtColumn: task.updatedAt.millisecondsSinceEpoch,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
+    return id;
   }
-  void updateTask(Task task) async {
+
+  Future<void> updateTask(Task task) async {
     final db = await database;
     await db.update(
       _tasksTableName,
@@ -87,7 +89,8 @@ class LocalDatabaseService {
       whereArgs: [task.id],
     );
   }
-  void deleteTask(int id) async {
+
+  Future<void> deleteTask(int id) async {
     final db = await database;
     await db.delete(
       _tasksTableName,
@@ -96,32 +99,27 @@ class LocalDatabaseService {
     );
   }
 
-  Future<List<Task>?> getTasks() async {
+  Future<List<Task>> getTasks() async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(_tasksTableName);
+    final List<Map<String, dynamic>> maps = await db.query(
+      _tasksTableName,
+      orderBy: '$_tasksCreatedAtColumn DESC', // Show newest tasks first
+    );
 
     return List.generate(maps.length, (i) {
       return Task(
-        id: maps[i][_tasksIdColumn],
-        title: maps[i][_tasksTitleColumn],
-        description: maps[i][_tasksDescriptionColumn],
-        priority: Priority.values[maps[i][_tasksPriorityColumn]],
-        dueDate: DateTime.fromMillisecondsSinceEpoch(
-          maps[i][_tasksDueDateColumn] ?? DateTime.now().millisecondsSinceEpoch,
-        ),
-        ownerId: maps[i][_tasksOwnerIdColumn] ?? 0,
-        assigned: maps[i][_tasksAssignedToColumn] != null
-            ? User(id: maps[i][_tasksAssignedToColumn], name: '', email: '')
+        id: maps[i]['id'],
+        title: maps[i]['title'],
+        description: maps[i]['description'],
+        priority: Priority.values[maps[i]['priority']],
+        dueDate: DateTime.fromMillisecondsSinceEpoch(maps[i]['dueDate']),
+        ownerId: maps[i]['ownerId'],
+        assigned: maps[i]['assignedTo'] != null
+            ? User(id: maps[i]['assignedTo'], name: '', email: '')
             : null,
-        isCompleted: (maps[i][_tasksIsCompletedColumn] ?? 0) == 1,
-        updatedAt: DateTime.fromMillisecondsSinceEpoch(
-          maps[i][_tasksUpdatedAtColumn] ??
-              DateTime.now().millisecondsSinceEpoch,
-        ),
-        createdAt: DateTime.fromMillisecondsSinceEpoch(
-          maps[i][_tasksCreatedAtColumn] ??
-              DateTime.now().millisecondsSinceEpoch,
-        ),
+        isCompleted: (maps[i]['isCompleted'] ?? 0) == 1,
+        updatedAt: DateTime.fromMillisecondsSinceEpoch(maps[i]['updatedAt']),
+        createdAt: DateTime.fromMillisecondsSinceEpoch(maps[i]['createdAt']),
       );
     });
   }
