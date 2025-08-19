@@ -57,7 +57,7 @@ class _ItemWidgetState extends State<ItemWidget> {
           children: [
             Text(
               widget.task.title,
-              style: TextStyle(color: Colors.black87,
+              style: TextStyle(color: Colors.black87,fontWeight: FontWeight.w500,
                 decoration: (widget.task.isCompleted) ? TextDecoration.lineThrough : null,
               ),
             ),
@@ -65,14 +65,14 @@ class _ItemWidgetState extends State<ItemWidget> {
               spacing: 10,
               children: [
                 (widget.task.assigned == null)
-                    ? Icon(Icons.circle_outlined, color: Colors.black)
+                    ? Icon(Icons.circle_outlined, color: Colors.black,size: 22,)
                     : Icon(
-                  Icons.circle,
+                  Icons.circle,size: 22,
                   color: (widget.task.isCompleted)
                       ? Colors.green
-                      : (widget.task.assigned == AuthController.currentUser)
-                      ? Colors.red
-                      : Colors.blue,
+                      : (widget.task.assigned?.getId == AuthController.currentUser?.getId)
+                      ? Colors.blueAccent
+                      : Colors.blueGrey
                 ),
                 Container(
                   height: 23,
@@ -87,7 +87,7 @@ class _ItemWidgetState extends State<ItemWidget> {
                   ),
                   child: Text(
                     Utils.timeLeft(widget.task.dueDate),
-                    style:const TextStyle(color: Colors.black, fontSize: 14 ),
+                    style:const TextStyle(color: Colors.black, fontSize: 14,fontWeight:FontWeight.w400  ),
                   ),
                 ),
               ],

@@ -13,6 +13,9 @@ class TasksScreen extends StatefulWidget {
 class _TasksScreenState extends State<TasksScreen> {
   final AuthController _authController = AuthController.instance;
   final LocalDatabaseService databaseService = LocalDatabaseService.instance;
+  
+  UniqueKey _futureBuilderKey = UniqueKey();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -33,17 +36,6 @@ class _TasksScreenState extends State<TasksScreen> {
           ),
         ),
         actions: [
-          //depending on the connection state
-          /*
-          const Text('Hors ligne',
-              style: TextStyle(
-                color: Colors.red,
-                fontWeight: FontWeight.bold,
-              )),
-          const SizedBox(width: 12),
-          const Icon(Icons.offline_pin_outlined,
-              color: Colors.red, size: 20),
-          */
           const Text(
             'En ligne',
             style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
@@ -53,13 +45,13 @@ class _TasksScreenState extends State<TasksScreen> {
           const SizedBox(width: 18),
         ],
       ),
-
       body: SafeArea(
         child: Column(
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                SizedBox(height: 5),
                 Row(
                   children: [
                     Container(
@@ -74,9 +66,7 @@ class _TasksScreenState extends State<TasksScreen> {
                           TextButton(
                             onPressed: () {},
                             style: TextButton.styleFrom(
-                              backgroundColor: Colors.purple.withOpacity(
-                                0.5,
-                              ), // Set background color here
+                              backgroundColor: Colors.purple.shade200,
                             ),
                             child: const Text(
                               'Tous',
@@ -119,12 +109,10 @@ class _TasksScreenState extends State<TasksScreen> {
                         ],
                       ),
                     ),
-                    //IconButton(onPressed: () {}, icon: const Icon(Icons.filter_list, size: 26),),//TODO: add filter
                   ],
                 ),
               ],
             ),
-            SizedBox(height: 5),
             SizedBox(height: 5),
             Expanded(
               child: Container(
@@ -136,11 +124,20 @@ class _TasksScreenState extends State<TasksScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () =>Navigator.pushNamed(context, '/add_task'),
+        onPressed: () async {
+          final result = await Navigator.pushNamed(context, '/add_task');
+          if (result == true) {
+            // Refresh the tasks list
+            setState(() {
+              _futureBuilderKey = UniqueKey();
+            });
+          }
+        },
         child: const Icon(Icons.add),
       ),
     );
   }
+
   Widget _tasksList () {
      return FutureBuilder(
       future: databaseService.getTasks(),

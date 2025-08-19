@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:project/models/task_model.dart';
 import 'package:project/services/local_database_service.dart';
 import 'package:project/views/widgets/task_form_widget.dart';
+import 'package:project/services/notif_service.dart';
 
 class EditTaskScreen extends StatelessWidget {
   final Task task;
@@ -19,6 +20,7 @@ class EditTaskScreen extends StatelessWidget {
         submitButtonText: 'Mettre à jour',
         onSubmit: (updatedTask) async {
           await databaseService.updateTask(updatedTask);
+          NotifService().dueTaskNotification(task.dueDate, task.getId, task.title);
           if(context.mounted)Navigator.pop(context, true);
         },
       ),
