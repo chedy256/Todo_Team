@@ -25,34 +25,16 @@ class _ItemWidgetState extends State<ItemWidget> {
 
   void _startTimer() {
     _timer?.cancel(); // Cancel existing timer
-
     final duration = Duration(minutes: 1);
     _timer = Timer.periodic(duration, (timer) {
       if (mounted) {
         setState(() {});
-        // Restart timer with new interval if time unit changed
-        final currentInterval = Duration(minutes: 1);
-        if (_timer != null && _shouldRestartTimer(currentInterval)) {
+        if (_timer != null) {
           _startTimer();
         }
       }
     });
   }
-
-  bool _shouldRestartTimer(Duration newInterval) {
-    final now = DateTime.now();
-    final difference = widget.task.dueDate.difference(now);
-
-    // Check if we've crossed a time boundary
-    if (difference.inDays == 0 && newInterval != const Duration(minutes: 1)) {
-      return true; // Switched from days to hours
-    }
-    if (difference.inHours == 0 && newInterval != const Duration(seconds: 30)) {
-      return true; // Switched from hours to minutes
-    }
-    return false;
-  }
-
   @override
   void dispose() {
     _timer?.cancel();
