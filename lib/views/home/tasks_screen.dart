@@ -128,9 +128,7 @@ class _TasksScreenState extends State<TasksScreen> {
           final result = await Navigator.pushNamed(context, '/add_task');
           if (result == true) {
             // Refresh the tasks list
-            setState(() {
-              _futureBuilderKey = UniqueKey();
-            });
+            _refreshTasksList();
           }
         },
         child: const Icon(Icons.add),
@@ -140,6 +138,7 @@ class _TasksScreenState extends State<TasksScreen> {
 
   Widget _tasksList () {
      return FutureBuilder(
+      key: _futureBuilderKey,
       future: databaseService.getTasks(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -153,11 +152,20 @@ class _TasksScreenState extends State<TasksScreen> {
           return ListView.builder(
             itemCount: tasks.length,
             itemBuilder: (context, index) {
-              return ItemWidget(task: tasks[index]);
+              return ItemWidget(
+                task: tasks[index],
+                onTaskChanged: _refreshTasksList,
+              );
             },
           );
         }
       },
     );
+  }
+  
+  void _refreshTasksList() {
+    setState(() {
+      _futureBuilderKey = UniqueKey();
+    });
   }
 }

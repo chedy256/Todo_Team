@@ -9,7 +9,8 @@ import '../../controllers/auth_controller.dart';
 
 class ItemWidget extends StatefulWidget {
   final Task task;
-  const ItemWidget({super.key, required this.task});
+  final VoidCallback? onTaskChanged;
+  const ItemWidget({super.key, required this.task, this.onTaskChanged});
   @override
   createState() => _ItemWidgetState();
 
@@ -106,8 +107,14 @@ class _ItemWidgetState extends State<ItemWidget> {
           task: widget.task,
           onTaskChanged: () {
             if (mounted) {
-              setState(() {}); // This will trigger timer restart
+              setState(() {}); // This will trigger timer restart and update this widget
               _startTimer(); // Restart timer with new interval
+            }
+          },
+          onTaskDeleted: () {
+            if (mounted) {
+              // For deletions, notify parent to refresh the entire task list
+              widget.onTaskChanged?.call();
             }
           },
         );

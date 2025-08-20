@@ -4,14 +4,21 @@ import 'package:project/services/dialogs_service.dart';
 import '../../controllers/auth_controller.dart';
 import '../../models/task_model.dart';
 import '../../services/local_database_service.dart';
+import '../../services/notif_service.dart';
 import '../home/edit_task_screen.dart';
 
 class TaskActions extends StatefulWidget {
   final Task task;
   final VoidCallback? onTaskChanged;
+  final VoidCallback? onTaskDeleted;
   static bool isBottomSheetOpen = false;
 
-  const TaskActions({super.key, required this.task, this.onTaskChanged});
+  const TaskActions({
+    super.key, 
+    required this.task, 
+    this.onTaskChanged,
+    this.onTaskDeleted,
+  });
 
   @override
   State<TaskActions> createState() => _TaskActionsState();
@@ -20,9 +27,17 @@ class TaskActions extends StatefulWidget {
 class _TaskActionsState extends State<TaskActions> {
   final LocalDatabaseService databaseService = LocalDatabaseService.instance;
   void _handleTaskChange() {
-    widget.onTaskChanged
-        ?.call(); // This will trigger timer restart in ItemWidget
-    Navigator.pop(context);
+    if (mounted) {
+      widget.onTaskChanged?.call(); // This will trigger timer restart in ItemWidget
+      Navigator.pop(context);
+    }
+  }
+
+  void _handleTaskDelete() {
+    if (mounted) {
+      widget.onTaskDeleted?.call(); // This will refresh the entire task list
+      Navigator.pop(context);
+    }
   }
 
   @override
@@ -73,8 +88,14 @@ class _TaskActionsState extends State<TaskActions> {
                           'êtes-vous sûr de vouloir supprimer cette tâche ?',
                         )) {
                           TaskActions.isBottomSheetOpen = false;
-                          databaseService.deleteTask(widget.task.getId);
-                          _handleTaskChange();
+                          
+                          // Cancel the notification for this task
+                          await NotifService().cancelNotification(widget.task.getId);
+                          
+                          // Delete the task from database
+                          await databaseService.deleteTask(widget.task.getId);
+                          
+                          _handleTaskDelete(); // Use delete handler for list refresh
                         } else {
                           return;
                         }
@@ -102,13 +123,19 @@ class _TaskActionsState extends State<TaskActions> {
                           ),
                         ),
                       ),
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              EditTaskScreen(task: widget.task),
-                        ),
-                      ),
+                      onTap: () async {
+                        TaskActions.isBottomSheetOpen = false;
+                        Navigator.pop(context); // Close the bottom sheet first
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => EditTaskScreen(task: widget.task),
+                          ),
+                        );
+                        if (result == true) {
+                          _handleTaskChange();
+                        }
+                      },
                     ),
                   ],
                 )
