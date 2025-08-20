@@ -5,8 +5,9 @@ class User {
   int get getId => id;
   String get getName => name;
   String get getEmail => email;
-  //TODO add JSON factory : add the user id
 }
+
+// Fallback users list for compatibility
 List<User> users = [
   User(id: 1, name: 'Bilel', email: 'bilel@email.com'),
   User(id: 2, name: 'Yacine', email: 'yacine@email.com'),

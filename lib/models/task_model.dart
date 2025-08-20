@@ -27,6 +27,8 @@ class Task {
   void setAssignedId(User? user)=>assigned = user;
   void setCompleted(bool value)=>isCompleted = value;
   set setDescription(String desc) => description = desc;
+  set setPriority(Priority newPriority) => priority = newPriority;
+  set setDueDate(DateTime newDueDate) => dueDate = newDueDate;
   String get getTitle => title;
   String get getDescription => description;
   int get getOwnerId => ownerId;
