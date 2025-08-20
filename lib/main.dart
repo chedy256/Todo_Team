@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:project/services/notif_service.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
+
 
 import 'package:project/controllers/auth_controller.dart';
 import 'package:project/services/secure_storage.dart';
@@ -15,8 +14,6 @@ final SecureStorage secureStorage = SecureStorage.instance;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  tz.initializeTimeZones();
-  tz.setLocalLocation(tz.getLocation('Africa/Tunis'));
   await NotifService().initNotification();
   final currentUser = await SecureStorage.instance.readCurrentUser();
   AuthController.currentUser=currentUser;
