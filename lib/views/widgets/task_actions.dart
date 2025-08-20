@@ -28,7 +28,7 @@ class _TaskActionsState extends State<TaskActions> {
   final LocalDatabaseService databaseService = LocalDatabaseService.instance;
   void _handleTaskChange() {
     if (mounted) {
-      widget.onTaskChanged?.call(); // This will trigger timer restart in ItemWidget
+      widget.onTaskChanged?.call(); // This will refresh the parent task list
       Navigator.pop(context);
     }
   }
@@ -133,7 +133,8 @@ class _TaskActionsState extends State<TaskActions> {
                           ),
                         );
                         if (result == true) {
-                          _handleTaskChange();
+                          // For task edits, we need to refresh the parent list to get updated task data
+                          widget.onTaskChanged?.call();
                         }
                       },
                     ),

@@ -196,7 +196,6 @@ class _TaskFormWidgetState extends State<TaskFormWidget> {
             labelStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             disabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.grey.shade400),
             ),
           ),
           style: TextStyle(
@@ -219,7 +218,7 @@ class _TaskFormWidgetState extends State<TaskFormWidget> {
                 } else {
                   _assignedUser = _availableUsers.firstWhere(
                     (user) => user.name == result,
-                    orElse: () => _availableUsers.isNotEmpty ? _availableUsers.first : User(id: 0, name: 'Unknown', email: ''),
+                    orElse: () => _availableUsers.isNotEmpty ? _availableUsers.first : User(id: 0, name: 'personne', email: ''),
                   );
                   _assignedController.text = _assignedUser?.name ?? '';
                 }

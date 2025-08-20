@@ -26,13 +26,9 @@ class _ItemWidgetState extends State<ItemWidget> {
 
   void _startTimer() {
     _timer?.cancel(); // Cancel existing timer
-    final duration = Duration(minutes: 1);
-    _timer = Timer.periodic(duration, (timer) {
+    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
       if (mounted) {
-        setState(() {});
-        if (_timer != null) {
-          _startTimer();
-        }
+        setState(() {}); // Update the time display every minute
       }
     });
   }
@@ -107,8 +103,8 @@ class _ItemWidgetState extends State<ItemWidget> {
           task: widget.task,
           onTaskChanged: () {
             if (mounted) {
-              setState(() {}); // This will trigger timer restart and update this widget
-              _startTimer(); // Restart timer with new interval
+              // For any task changes (edits, status changes), refresh the parent list
+              widget.onTaskChanged?.call();
             }
           },
           onTaskDeleted: () {

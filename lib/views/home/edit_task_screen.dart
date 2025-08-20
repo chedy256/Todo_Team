@@ -19,14 +19,18 @@ class EditTaskScreen extends StatelessWidget {
         initialTask: task,
         submitButtonText: 'Mettre à jour',
         onSubmit: (updatedTask) async {
-          // Cancel the old notification first
-          await NotifService().cancelNotification(task.getId);
+          // Check if due date has changed
+          bool dueDateChanged = task.dueDate != updatedTask.dueDate;
+          
+          if (dueDateChanged) {
+            // Cancel the old notification first
+            await NotifService().cancelNotification(task.getId);
+            // Schedule new notification with updated due date
+            await NotifService().dueTaskNotification(updatedTask.dueDate, updatedTask.getId, updatedTask.title);
+          }
           
           // Update the task in database
           await databaseService.updateTask(updatedTask);
-          
-          // Schedule new notification with updated due date
-          await NotifService().dueTaskNotification(updatedTask.dueDate, updatedTask.getId, updatedTask.title);
           
           if(context.mounted) Navigator.pop(context, true);
         },
