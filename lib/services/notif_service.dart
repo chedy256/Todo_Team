@@ -95,19 +95,27 @@ class NotifService {
     final diff = dueDate.difference(DateTime.now());
 
     if (diff.isNegative) {
+      // Task is already past due, no notification needed
       return;
     } else {
       if (diff.inHours < 24) {
-        await showNotification(
-          id: taskId,
-          title: "Date Delai de la tâche s'approche",
-          body:
-              'La tâche "$taskTitle" se termine en ${Utils.timeLeft(dueDate)}',
+        // Schedule notification to show immediately for tasks due within 24 hours
+        final scheduledTime = tz.TZDateTime.now(tz.local).add(
+          const Duration(seconds: 2), // Small delay to ensure proper scheduling
+        );
+        await notificationPlugin.zonedSchedule(
+          taskId,
+          "Date Delai de la tâche s'approche",
+          'La tâche "$taskTitle" se termine en ${Utils.timeLeft(dueDate)}',
+          scheduledTime,
+          notificationDetails(),
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         );
       } else {
+        // Schedule notification 24 hours before due date
         final scheduledTime = tz.TZDateTime.now(tz.local).add(
           Duration(
-            hours: diff.inHours-24,
+            hours: diff.inHours - 24,
             minutes: diff.inMinutes % 60,
             seconds: 10,
           ),
