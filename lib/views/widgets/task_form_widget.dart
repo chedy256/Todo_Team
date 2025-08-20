@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:project/models/task_model.dart';
+import 'package:project/models/user_model.dart';
 import 'package:project/controllers/auth_controller.dart';
+import 'package:project/services/local_database_service.dart';
 
 class TaskFormWidget extends StatefulWidget {
   final Task? initialTask;
@@ -28,11 +30,23 @@ class _TaskFormWidgetState extends State<TaskFormWidget> {
 
   DateTime? _pickedDate;
   TimeOfDay? _pickedTime;
+  User? _assignedUser;
+  List<User> _availableUsers = []; // Store users from database
 
   @override
   void initState() {
     super.initState();
+    _loadUsers();
     _initializeControllers();
+  }
+
+  Future<void> _loadUsers() async {
+    try {
+      _availableUsers = await LocalDatabaseService.instance.getUsers();
+      setState(() {});
+    } catch (e) {
+      _availableUsers = users;
+    }
   }
 
   void _initializeControllers() {
@@ -45,6 +59,13 @@ class _TaskFormWidgetState extends State<TaskFormWidget> {
     _timeController = TextEditingController();
     
     _priority = task?.priority ?? Priority.low;
+    _assignedUser = task?.assigned;
+    
+    if (_assignedUser != null) {
+      _assignedController.text = _assignedUser!.name;
+    } else if (task != null && task.assigned == null) {
+      _assignedController.text = "personne";
+    }
     
     if (task?.dueDate != null) {
       _pickedDate = task!.dueDate;
@@ -151,6 +172,8 @@ class _TaskFormWidgetState extends State<TaskFormWidget> {
   }
 
   Widget _buildAssignedSection() {
+    bool isTaskAlreadyAssigned = widget.initialTask?.assigned != null;
+    
     return Column(
       children: [
         const Text(
@@ -161,21 +184,61 @@ class _TaskFormWidgetState extends State<TaskFormWidget> {
         TextField(
           controller: _assignedController,
           readOnly: true,
+          enabled: !isTaskAlreadyAssigned, // Disable if already assigned
           decoration: InputDecoration(
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-            labelText: "Selectionnez la personne",
+            labelText: isTaskAlreadyAssigned 
+                ? "Personne assignée" 
+                : "Selectionnez la personne",
+            hintText: !isTaskAlreadyAssigned 
+                ? "Tapez pour sélectionner" 
+                : null,
             labelStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade400),
+            ),
           ),
-          onTap: () async {
+          style: TextStyle(
+            color: isTaskAlreadyAssigned ? Colors.grey.shade700 : Colors.black,
+            fontWeight: isTaskAlreadyAssigned ? FontWeight.w500 : FontWeight.normal,
+          ),
+          onTap: isTaskAlreadyAssigned ? null : () async {
             final result = await showSearch(
               context: context,
-              delegate: CustomSearchDelegate(),
+              delegate: CustomSearchDelegate(_availableUsers),
             );
             if (result != null) {
-              _assignedController.text = result;
+              setState(() {
+                if (result == 'personne') {
+                  _assignedUser = null;
+                  _assignedController.text = '';
+                } else if (result.startsWith('Moi même:')) {
+                  _assignedUser = AuthController.currentUser;
+                  _assignedController.text = AuthController.currentUser?.name ?? '';
+                } else {
+                  _assignedUser = _availableUsers.firstWhere(
+                    (user) => user.name == result,
+                    orElse: () => _availableUsers.isNotEmpty ? _availableUsers.first : User(id: 0, name: 'Unknown', email: ''),
+                  );
+                  _assignedController.text = _assignedUser?.name ?? '';
+                }
+              });
             }
           },
         ),
+        if (isTaskAlreadyAssigned)
+          const Padding(
+            padding: EdgeInsets.only(top: 8.0),
+            child: Text(
+              "Cette tâche est déjà assignée et ne peut pas être modifiée",
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -273,6 +336,7 @@ class _TaskFormWidgetState extends State<TaskFormWidget> {
       priority: _priority,
       dueDate: dueDate,
       ownerId: AuthController.currentUser!.getId,
+      assigned: _assignedUser, // Include the assigned user
       isCompleted: widget.initialTask?.isCompleted ?? false,
       updatedAt: DateTime.now(),
       createdAt: widget.initialTask?.createdAt ?? DateTime.now(),
@@ -299,15 +363,23 @@ class _TaskFormWidgetState extends State<TaskFormWidget> {
 }
 
 class CustomSearchDelegate extends SearchDelegate<String> {
-  List<String> searchTerms = [
-    'personne',
-    'Moi même: ${AuthController.currentUser?.name}',
-    'chedy',
-    'admin',
-    'yassine',
-    'bilel',
-    'mohamed',
-  ];
+  final List<User> availableUsers;
+  
+  CustomSearchDelegate(this.availableUsers);
+  
+  List<String> get searchTerms {
+    List<String> terms = ['personne'];
+    
+    if (AuthController.currentUser != null) {
+      terms.add('Moi même: ${AuthController.currentUser!.name}');
+    }
+    
+    for (User user in availableUsers) {
+      terms.add(user.name);
+    }
+    
+    return terms;
+  }
 
   @override
   List<Widget> buildActions(BuildContext context) {
