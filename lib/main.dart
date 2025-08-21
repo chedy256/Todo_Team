@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:project/services/notif_service.dart';
-
+import 'package:project/controllers/task_provider.dart';
 
 import 'package:project/controllers/auth_controller.dart';
 import 'package:project/services/secure_storage.dart';
@@ -34,18 +35,21 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'ToDo Team',
-      initialRoute: AuthController.currentUser!=null
-          ? '/tasks'
-          : '/login',
-      routes: {
-        '/login': (context) => const LoginScreen(),
-        '/signup': (context) => const SignUpScreen(),
-        '/tasks': (context) => const TasksScreen(),
-        '/add_task': (context) => const AddTaskScreen(),
-      },
+    return ChangeNotifierProvider(
+      create: (context) => TaskProvider(),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'ToDo Team',
+        initialRoute: AuthController.currentUser!=null
+            ? '/tasks'
+            : '/login',
+        routes: {
+          '/login': (context) => const LoginScreen(),
+          '/signup': (context) => const SignUpScreen(),
+          '/tasks': (context) => const TasksScreen(),
+          '/add_task': (context) => const AddTaskScreen(),
+        },
+      ),
     );
   }
 }

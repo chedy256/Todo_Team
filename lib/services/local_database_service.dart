@@ -161,14 +161,13 @@ class LocalDatabaseService {
       User? assignedUser;
       if (maps[i]['assignedTo'] != null) {
         assignedUser = _getUserFromCacheById(maps[i]['assignedTo']);
-        
-        if (assignedUser == null) {
-          assignedUser = User(
-            id: maps[i]['assignedTo'], 
-            name: 'Unknown User', 
-            email: 'unknown@email.com'
-          );
-        }
+
+        assignedUser ??= User(
+          id: maps[i]['assignedTo'],
+          name: 'Unknown User',
+          email: 'unknown@email.com',
+        );
+
       }
 
       return Task(

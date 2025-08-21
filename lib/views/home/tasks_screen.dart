@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:project/controllers/auth_controller.dart';
+import 'package:project/controllers/task_provider.dart';
 
-import '../../services/local_database_service.dart';
 import '../widgets/item_widget.dart';
 
 class TasksScreen extends StatefulWidget {
@@ -12,9 +13,14 @@ class TasksScreen extends StatefulWidget {
 
 class _TasksScreenState extends State<TasksScreen> {
   final AuthController _authController = AuthController.instance;
-  final LocalDatabaseService databaseService = LocalDatabaseService.instance;
-  
-  UniqueKey _futureBuilderKey = UniqueKey();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TaskProvider>().loadTasks();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -123,12 +129,11 @@ class _TasksScreenState extends State<TasksScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
+        floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final result = await Navigator.pushNamed(context, '/add_task');
-          if (result == true) {
-            // Refresh the tasks list
-            _refreshTasksList();
+          if (result == true && context.mounted) {
+            context.read<TaskProvider>().refreshTasks();
           }
         },
         child: const Icon(Icons.add),
@@ -136,36 +141,27 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
-  Widget _tasksList () {
-     return FutureBuilder(
-      key: _futureBuilderKey,
-      future: databaseService.getTasks(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+  Widget _tasksList() {
+    return Consumer<TaskProvider>(
+      builder: (context, taskProvider, child) {
+        if (taskProvider.isLoading) {
           return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Erreur : ${snapshot.error}'));
-        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+        } else if (taskProvider.error != null) {
+          return Center(child: Text('Erreur : ${taskProvider.error}'));
+        } else if (taskProvider.tasks.isEmpty) {
           return const Center(child: Text('Aucune tâche trouvée.'));
         } else {
-          final tasks = snapshot.data!;
           return ListView.builder(
-            itemCount: tasks.length,
+            itemCount: taskProvider.tasks.length,
             itemBuilder: (context, index) {
               return ItemWidget(
-                task: tasks[index],
-                onTaskChanged: _refreshTasksList,
+                task: taskProvider.tasks[index],
+                onTaskChanged: () => taskProvider.refreshTasks(),
               );
             },
           );
         }
       },
     );
-  }
-  
-  void _refreshTasksList() {
-    setState(() {
-      _futureBuilderKey = UniqueKey();
-    });
   }
 }
