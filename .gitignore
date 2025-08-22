@@ -23,6 +23,9 @@ migrate_working_dir/
 # is commented out by default.
 #.vscode/
 
+# meant to plan out the future steps: and store bugs along the way
+ToDo
+
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id

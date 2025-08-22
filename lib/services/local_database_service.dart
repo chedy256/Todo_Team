@@ -1,6 +1,7 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../models/task_filter.dart';
 import '../models/task_model.dart';
 import '../models/user_model.dart';
 
@@ -76,7 +77,7 @@ class LocalDatabaseService {
               $_usersEmailColumn TEXT NOT NULL UNIQUE
             )
           ''');
-          
+
           await _insertDefaultUsers(db);
         }
       },
@@ -145,29 +146,82 @@ class LocalDatabaseService {
     );
   }
 
-  Future<List<Task>> getTasks() async {
+  Future<List<Task>> getTasks({
+    TaskStatus? status,
+    SortType sortType = SortType.dueDate,
+  }) async {
     final db = await database;
-    
+
     if (_userCache == null) {
       await refreshUserCache();
     }
-    
+
+    String? whereClause;
+    List<dynamic> whereArgs = [];
+
+    if (status != null && status != TaskStatus.all) {
+      switch (status) {
+        case TaskStatus.pending:
+          whereClause =
+              '$_tasksIsCompletedColumn = ? AND $_tasksAssignedToColumn IS NULL';
+          whereArgs = [0];
+          break;
+        case TaskStatus.inProgress:
+          whereClause =
+              '$_tasksIsCompletedColumn = ? AND $_tasksAssignedToColumn IS NOT NULL';
+          whereArgs = [0];
+          break;
+        case TaskStatus.completed:
+          whereClause = '$_tasksIsCompletedColumn = ?';
+          whereArgs = [1];
+          break;
+        case TaskStatus.all:
+          // No filter needed
+          break;
+      }
+    }
+
+    String orderByClause = _buildOrderByClause(sortType);
+
     final List<Map<String, dynamic>> maps = await db.query(
       _tasksTableName,
-      orderBy: '$_tasksCreatedAtColumn DESC',
+      where: whereClause,
+      whereArgs: whereArgs.isNotEmpty ? whereArgs : null,
+      orderBy: orderByClause,
     );
 
+    return _mapToTaskList(maps);
+  }
+
+  String _buildOrderByClause(SortType sortType) {
+    String column;
+    switch (sortType) {
+      case SortType.createdDate:
+        column = _tasksCreatedAtColumn;
+        break;
+      case SortType.dueDate:
+        column = _tasksDueDateColumn;
+        break;
+      case SortType.priority:
+        column = _tasksPriorityColumn;
+        break;
+    }
+    String order = 'ASC'; //or 'DESC' TODO : check after test
+
+    return '$column $order';
+  }
+
+  List<Task> _mapToTaskList(List<Map<String, dynamic>> maps) {
     return List.generate(maps.length, (i) {
       User? assignedUser;
       if (maps[i]['assignedTo'] != null) {
-        assignedUser = _getUserFromCacheById(maps[i]['assignedTo']);
-
-        assignedUser ??= User(
-          id: maps[i]['assignedTo'],
-          name: 'Unknown User',
-          email: 'unknown@email.com',
-        );
-
+        assignedUser =
+            _getUserFromCacheById(maps[i]['assignedTo']) ??
+            User(
+              id: maps[i]['assignedTo'],
+              name: 'Unknown User',
+              email: 'unknown@email.com',
+            );
       }
 
       return Task(
@@ -220,7 +274,7 @@ class LocalDatabaseService {
   }
 
   static List<User>? _userCache;
-  
+
   User? _getUserFromCacheById(int id) {
     if (_userCache != null) {
       try {
