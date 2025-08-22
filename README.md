@@ -8,6 +8,7 @@ A Flutter-based collaborative "Offline-First" task management app for teams, sup
 - [Architecture](#architecture)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Roadmap](#roadmap)
 
 ## Features
 ### **Done:**
@@ -62,3 +63,15 @@ A Flutter-based collaborative "Offline-First" task management app for teams, sup
 5. **Offline Mode** — Make changes offline; they sync when you reconnect.
 6. **Notifications** — Receive alerts for tasks due soon.
 7. **Push Notifications** — Get updates on task changes from teammates.
+
+## Roadmap
+1. **Functionality**
+- Add ADMIN support: KPI statistics, user management, task analytics, and advanced reporting (can be desktop app or web app)
+2. **Performance level** 
+- Add Pagination : splitting tasks loaded in chunks
+- Add Lazy Loading : limit number of displayed tasks
+3. **Esthetics**
+- Add Shimmer Effect: Visually appealing shimmer effect during task loading
+- Add dark theme
+4. **Nice To Have**
+- Integration with the calendar
