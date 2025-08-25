@@ -260,7 +260,7 @@ class LocalDatabaseService {
         column = _tasksPriorityColumn;
         break;
     }
-    String order = 'ASC'; //or 'DESC' TODO : check after test
+    String order = 'DESC';
 
     return '$column $order';
   }
