@@ -26,6 +26,9 @@ migrate_working_dir/
 # meant to plan out the future steps: and store bugs along the way
 ToDo
 
+# Envirement variables file
+.env
+
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id

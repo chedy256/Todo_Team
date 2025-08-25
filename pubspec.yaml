@@ -39,6 +39,8 @@ dependencies:
   flutter_local_notifications: ^19.4.0
   timezone: ^0.10.1
   flutter_timezone: ^4.1.1
+  flutter_dotenv: ^6.0.0
+  http: ^1.5.0
 
 dev_dependencies:
   flutter_test:
@@ -83,6 +85,7 @@ flutter:
     - assets/splash.png
     - assets/branding.png
     - assets/icon.png
+    - .env
 
   # To add custom fonts to your application, add a fonts section here,
   # fonts:
