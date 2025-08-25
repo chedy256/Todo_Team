@@ -1,81 +1,102 @@
 import 'package:flutter/material.dart';
 import 'package:project/services/dialogs_service.dart';
-import 'package:project/services/secure_storage.dart';
 
-import '../models/user_model.dart';
+import '../models/current_user.dart';
 import '../services/online_service.dart';
 
 class AuthController {
   static final AuthController instance = AuthController._constructor();
-  static User? currentUser;
-  final SecureStorage secureStorage = SecureStorage.instance;
+  static CurrentUser? currentUser;
   AuthController._constructor();
 
-    Future<void> login(String email,String password, BuildContext context) async {
-    //loading Circle
+  Future<void> login(String email, String password, BuildContext context) async {
+    // Loading Circle
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
-        return Center(child: CircularProgressIndicator());
+        return const Center(child: CircularProgressIndicator());
       },
     );
-    ApiService.login(email: email, password: password);
-    await Future.delayed(Duration(seconds: 1));
-    if (context.mounted) {
-      Navigator.of(context).pop();
-      if ( email=='user@gmail.com' && password == 'admin') {
-        currentUser=User(id: 123, username: 'admin', email: email);
 
+    try {
+      final user = await ApiService.login(email: email, password: password);
+      currentUser = user;
+
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
         Navigator.pushNamedAndRemoveUntil(
           context,
           '/tasks',
-              (route) => false,
+          (route) => false,
         );
       }
-      else {
-        DialogService.showInfoDialog(context, 'Connexion echouié', 'Email ou mot de passe incorrect');
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        DialogService.showInfoDialog(
+          context,
+          'Connexion échouée',
+          'Email ou mot de passe incorrect'
+        );
       }
     }
   }
+
   Future<void> signup(
-      String email,
-      String password,
-      String name,
-      BuildContext context,
-      ) async {
+    String email,
+    String password,
+    String name,
+    BuildContext context,
+  ) async {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
-        return Center(child: CircularProgressIndicator());
+        return const Center(child: CircularProgressIndicator());
       },
     );
-    // Sign up logic
+
     try {
-      await ApiService.register(email: email, password: password, username: name);
-    }catch(e){
+      final user = await ApiService.register(
+        email: email,
+        password: password,
+        username: name
+      );
+      currentUser = user;
+
       if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/tasks',
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
         DialogService.showErrorDialog(context, e.toString());
       }
     }
+  }
 
-    if (context.mounted) {
-      Navigator.of(context).pop();
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        '/tasks',
-            (route) => false,
-      );
-    }
-  }
-  void logout(BuildContext context) {
-    secureStorage.deleteToken();
+  Future<void> logout(BuildContext context) async {
+    await ApiService.logout();
     currentUser = null;
-    Navigator.pushReplacementNamed(context, '/login');
+    if (context.mounted) Navigator.pushReplacementNamed(context, '/login');
   }
+
+  // Check if user is logged in on app start
+  Future<void> checkAuthStatus() async {
+    currentUser=  await ApiService.isTokenValid()? currentUser : null;
+  }
+
   void goSignUp(BuildContext context) {
     Navigator.pushReplacementNamed(context, '/signup');
   }
+
   void goLogin(BuildContext context) {
-    Navigator.pushReplacementNamed(context,'/login');
+    Navigator.pushReplacementNamed(context, '/login');
   }
 }
