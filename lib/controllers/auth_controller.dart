@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:project/services/dialogs_service.dart';
 import 'package:project/services/secure_storage.dart';
 
-import '../models/current_user.dart';
 import '../models/user_model.dart';
+import '../services/online_service.dart';
 
 class AuthController {
   static final AuthController instance = AuthController._constructor();
@@ -19,13 +19,13 @@ class AuthController {
         return Center(child: CircularProgressIndicator());
       },
     );
-    // Sign in logic
+    ApiService.login(email: email, password: password);
     await Future.delayed(Duration(seconds: 1));
     if (context.mounted) {
       Navigator.of(context).pop();
       if ( email=='user@gmail.com' && password == 'admin') {
-        currentUser=User(id: 123, name: 'admin', email: email);
-        secureStorage.writeCurrentUser(CurrentUser(id: currentUser!.getId, name: "admin", email: email, token: 100));
+        currentUser=User(id: 123, username: 'admin', email: email);
+
         Navigator.pushNamedAndRemoveUntil(
           context,
           '/tasks',
@@ -50,9 +50,13 @@ class AuthController {
       },
     );
     // Sign up logic
-    await Future.delayed(Duration(seconds: 1));
-    currentUser=User(id: 123, name: name, email: email);
-    secureStorage.writeCurrentUser(CurrentUser(id: currentUser!.getId, name: name, email: email, token: 100));
+    try {
+      await ApiService.register(email: email, password: password, username: name);
+    }catch(e){
+      if (context.mounted) {
+        DialogService.showErrorDialog(context, e.toString());
+      }
+    }
 
     if (context.mounted) {
       Navigator.of(context).pop();
@@ -64,7 +68,8 @@ class AuthController {
     }
   }
   void logout(BuildContext context) {
-    secureStorage.deleteCurrentUser();
+    secureStorage.deleteToken();
+    currentUser = null;
     Navigator.pushReplacementNamed(context, '/login');
   }
   void goSignUp(BuildContext context) {

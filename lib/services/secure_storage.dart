@@ -1,7 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import '../models/current_user.dart';
-
 class SecureStorage {
   static final SecureStorage instance = SecureStorage._constructor();
   SecureStorage._constructor();
@@ -10,28 +8,35 @@ class SecureStorage {
     aOptions: const AndroidOptions(encryptedSharedPreferences: true),
   );
 
-  Future<void> writeCurrentUser(CurrentUser user) async {
+  Future<void> writeToken(String token) async {
     await storage.write(
-      key: 'currentUser',
-      value: '${user.id},${user.name},${user.email},${user.token}',
+      key: 'token',
+      value: token,
+    );
+    await storage.write(
+      key: 'expiry',
+      value: DateTime.now().add(Duration(hours: 12)).toIso8601String(),
     );
   }
-  // This function can be used to retrieve the current user from secure storage
-  Future <CurrentUser?> readCurrentUser() async{
-    final value = await storage.read(key: 'currentUser');
+  // This function can be used to retrieve the token from secure storage
+  Future <String?> readToken() async{
+    final String? value = await storage.read(key: 'token');
     if (value != null) {
-      final userData = value.split(',');
-      return CurrentUser(
-        id: int.parse(userData[0]),
-        name: userData[1],
-        email: userData[2],
-        token: int.parse(userData[3]),
-      );
+      return value;
     } else {
       return null;
     }
   }
-  Future<void> deleteCurrentUser() async {
-    await storage.delete(key: 'currentUser');
+  Future <String?> readExpiry() async{
+    final String? value = await storage.read(key: 'expiry');
+    if (value != null) {
+      return value;
+    } else {
+      return null;
+    }
+  }
+  Future<void> deleteToken() async {
+    await storage.delete(key: 'token');
+    await storage.delete(key: 'expiry');
   }
 }

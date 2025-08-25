@@ -9,7 +9,7 @@ class Task {
   String description;
   Priority priority;
   bool isCompleted = false;
-  User? assigned;
+  User? assignedId;
   DateTime dueDate, updatedAt;
   late final DateTime createdAt;
   Task({
@@ -19,12 +19,12 @@ class Task {
     required this.priority,
     required this.dueDate,
     required this.ownerId,
-    this.assigned,
+    this.assignedId,
     required this.isCompleted,
     required this.updatedAt,
     required this.createdAt,
   });
-  void setAssignedId(User? user)=>assigned = user;
+  void setAssignedId(User? user)=>assignedId = user;
   void setCompleted(bool value)=>isCompleted = value;
   set setDescription(String desc) => description = desc;
   set setPriority(Priority newPriority) => priority = newPriority;
@@ -33,6 +33,5 @@ class Task {
   String get getDescription => description;
   int get getOwnerId => ownerId;
   int get getId => id!;
-  User? get getAssigned => assigned;
   DateTime get getDueDate => dueDate;
 }

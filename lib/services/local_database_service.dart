@@ -27,6 +27,15 @@ class LocalDatabaseService {
   final String _usersNameColumn = 'name';
   final String _usersEmailColumn = 'email';
 
+  final String _pendingChangesTableName = 'pending_changes';
+  final String _pendingChangesIdColumn = 'id';
+  final String _pendingChangesTaskIdColumn = 'task_id';
+  final String _pendingChangesChangeTypeColumn = 'change_type';
+  final String _pendingChangesBeforeChangeColumn = 'before_change';
+  final String _pendingChangesAfterChangeColumn = 'after_change';
+  final String _pendingChangesTimestampColumn = 'timestamp';
+  final String _pendingChangesSyncedColumn = 'synced';
+
   LocalDatabaseService._constructor();
 
   Future<Database> get database async {
@@ -42,6 +51,7 @@ class LocalDatabaseService {
       databasePath,
       version: 2,
       onCreate: (db, version) async {
+        // Create users table first
         await db.execute('''
           CREATE TABLE $_usersTableName (
             $_usersIdColumn INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,7 +59,7 @@ class LocalDatabaseService {
             $_usersEmailColumn TEXT NOT NULL UNIQUE
           )
         ''');
-
+        // Then create tasks table
         await db.execute('''
           CREATE TABLE $_tasksTableName (
             $_tasksIdColumn INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,6 +76,29 @@ class LocalDatabaseService {
           )
         ''');
 
+        // Add pending_changes table
+        await db.execute('''
+          CREATE TABLE $_pendingChangesTableName (
+            $_pendingChangesIdColumn INTEGER PRIMARY KEY AUTOINCREMENT,
+            $_pendingChangesTaskIdColumn INTEGER,
+            $_pendingChangesChangeTypeColumn TEXT,
+            $_pendingChangesBeforeChangeColumn TEXT,
+            $_pendingChangesAfterChangeColumn TEXT,
+            $_pendingChangesTimestampColumn INTEGER,
+            $_pendingChangesSyncedColumn INTEGER DEFAULT 0
+          )
+        ''');
+
+        // Trigger to auto-remove when synced becomes 1
+        await db.execute('''
+          CREATE TRIGGER IF NOT EXISTS delete_synced_pending_changes
+          AFTER UPDATE OF synced ON $_pendingChangesTableName
+          WHEN NEW.$_pendingChangesSyncedColumn = 1
+          BEGIN
+            DELETE FROM $_pendingChangesTableName WHERE $_pendingChangesIdColumn = NEW.$_pendingChangesIdColumn;
+          END;
+        ''');
+
         await _insertDefaultUsers(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
@@ -80,6 +113,27 @@ class LocalDatabaseService {
 
           await _insertDefaultUsers(db);
         }
+        // Ensure pending_changes table exists on upgrade
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS $_pendingChangesBeforeChangeColumn (
+            $_pendingChangesIdColumn INTEGER PRIMARY KEY AUTOINCREMENT,
+            $_pendingChangesTaskIdColumn INTEGER,
+            $_pendingChangesChangeTypeColumn TEXT,
+            $_pendingChangesBeforeChangeColumn TEXT,
+            $_pendingChangesAfterChangeColumn TEXT,
+            $_pendingChangesTimestampColumn INTEGER,
+            $_pendingChangesSyncedColumn INTEGER DEFAULT 0
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TRIGGER IF NOT EXISTS delete_synced_pending_changes
+          AFTER UPDATE OF synced ON $_pendingChangesTableName
+          WHEN NEW.$_pendingChangesSyncedColumn = 1
+          BEGIN
+            DELETE FROM $_pendingChangesTableName WHERE $_pendingChangesIdColumn = NEW.$_pendingChangesIdColumn;
+          END;
+        ''');
       },
     );
     return database;
@@ -109,7 +163,7 @@ class LocalDatabaseService {
       _tasksDescriptionColumn: task.description,
       _tasksPriorityColumn: task.priority.index,
       _tasksOwnerIdColumn: task.ownerId,
-      _tasksAssignedToColumn: task.assigned?.id,
+      _tasksAssignedToColumn: task.assignedId?.id,
       _tasksIsCompletedColumn: task.isCompleted ? 1 : 0,
       _tasksDueDateColumn: task.dueDate.millisecondsSinceEpoch,
       _tasksCreatedAtColumn: task.createdAt.millisecondsSinceEpoch,
@@ -127,7 +181,7 @@ class LocalDatabaseService {
         _tasksDescriptionColumn: task.description,
         _tasksPriorityColumn: task.priority.index,
         _tasksOwnerIdColumn: task.ownerId,
-        _tasksAssignedToColumn: task.assigned?.id,
+        _tasksAssignedToColumn: task.assignedId?.id,
         _tasksIsCompletedColumn: task.isCompleted ? 1 : 0,
         _tasksDueDateColumn: task.dueDate.millisecondsSinceEpoch,
         _tasksUpdatedAtColumn: DateTime.now().millisecondsSinceEpoch,
@@ -219,7 +273,7 @@ class LocalDatabaseService {
             _getUserFromCacheById(maps[i]['assignedTo']) ??
             User(
               id: maps[i]['assignedTo'],
-              name: 'Unknown User',
+              username: 'Unknown User',
               email: 'unknown@email.com',
             );
       }
@@ -231,7 +285,7 @@ class LocalDatabaseService {
         priority: Priority.values[maps[i]['priority']],
         dueDate: DateTime.fromMillisecondsSinceEpoch(maps[i]['dueDate']),
         ownerId: maps[i]['ownerId'],
-        assigned: assignedUser,
+        assignedId: assignedUser,
         isCompleted: (maps[i]['isCompleted'] ?? 0) == 1,
         updatedAt: DateTime.fromMillisecondsSinceEpoch(maps[i]['updatedAt']),
         createdAt: DateTime.fromMillisecondsSinceEpoch(maps[i]['createdAt']),
@@ -249,7 +303,7 @@ class LocalDatabaseService {
     return List.generate(maps.length, (i) {
       return User(
         id: maps[i]['id'],
-        name: maps[i]['name'],
+        username: maps[i]['name'],
         email: maps[i]['email'],
       );
     });
@@ -266,7 +320,7 @@ class LocalDatabaseService {
     if (maps.isNotEmpty) {
       return User(
         id: maps[0]['id'],
-        name: maps[0]['name'],
+        username: maps[0]['name'],
         email: maps[0]['email'],
       );
     }

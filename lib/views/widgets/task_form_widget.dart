@@ -59,11 +59,11 @@ class _TaskFormWidgetState extends State<TaskFormWidget> {
     _timeController = TextEditingController();
     
     _priority = task?.priority ?? Priority.low;
-    _assignedUser = task?.assigned;
+    _assignedUser = task?.assignedId;
     
     if (_assignedUser != null) {
-      _assignedController.text = _assignedUser!.name;
-    } else if (task != null && task.assigned == null) {
+      _assignedController.text = _assignedUser!.username;
+    } else if (task != null && task.assignedId == null) {
       _assignedController.text = "personne";
     }
     
@@ -172,7 +172,7 @@ class _TaskFormWidgetState extends State<TaskFormWidget> {
   }
 
   Widget _buildAssignedSection() {
-    bool isTaskAlreadyAssigned = widget.initialTask?.assigned != null;
+    bool isTaskAlreadyAssigned = widget.initialTask?.assignedId != null;
     
     return Column(
       children: [
@@ -214,13 +214,13 @@ class _TaskFormWidgetState extends State<TaskFormWidget> {
                   _assignedController.text = '';
                 } else if (result.startsWith('Moi même:')) {
                   _assignedUser = AuthController.currentUser;
-                  _assignedController.text = AuthController.currentUser?.name ?? '';
+                  _assignedController.text = AuthController.currentUser?.username ?? '';
                 } else {
                   _assignedUser = _availableUsers.firstWhere(
-                    (user) => user.name == result,
-                    orElse: () => _availableUsers.isNotEmpty ? _availableUsers.first : User(id: 0, name: 'personne', email: ''),
+                    (user) => user.username == result,
+                    orElse: () => _availableUsers.isNotEmpty ? _availableUsers.first : User(id: 0, username: 'personne', email: ''),
                   );
-                  _assignedController.text = _assignedUser?.name ?? '';
+                  _assignedController.text = _assignedUser?.username ?? '';
                 }
               });
             }
@@ -335,7 +335,7 @@ class _TaskFormWidgetState extends State<TaskFormWidget> {
       priority: _priority,
       dueDate: dueDate,
       ownerId: AuthController.currentUser!.getId,
-      assigned: _assignedUser, // Include the assigned user
+      assignedId: _assignedUser, // Include the assigned user
       isCompleted: widget.initialTask?.isCompleted ?? false,
       updatedAt: DateTime.now(),
       createdAt: widget.initialTask?.createdAt ?? DateTime.now(),
@@ -370,11 +370,11 @@ class CustomSearchDelegate extends SearchDelegate<String> {
     List<String> terms = ['personne'];
     
     if (AuthController.currentUser != null) {
-      terms.add('Moi même: ${AuthController.currentUser!.name}');
+      terms.add('Moi même: ${AuthController.currentUser!.username}');
     }
     
     for (User user in availableUsers) {
-      terms.add(user.name);
+      terms.add(user.username);
     }
     
     return terms;

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'package:project/services/notif_service.dart';
 import 'package:project/controllers/task_provider.dart';
-
 import 'package:project/controllers/auth_controller.dart';
 import 'package:project/services/secure_storage.dart';
 import 'package:project/views/auth/login_screen.dart';
@@ -15,9 +16,8 @@ final SecureStorage secureStorage = SecureStorage.instance;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   await NotifService().initNotification();
-  final currentUser = await SecureStorage.instance.readCurrentUser();
-  AuthController.currentUser=currentUser;
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,

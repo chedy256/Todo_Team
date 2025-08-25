@@ -63,13 +63,13 @@ class _ItemWidgetState extends State<ItemWidget> {
             Row(
               spacing: 10,
               children: [
-                (widget.task.assigned == null)
+                (widget.task.assignedId == null)
                     ? Icon(Icons.circle_outlined, color: Colors.black,size: 22,)
                     : Icon(
                   Icons.circle,size: 22,
                   color: (widget.task.isCompleted)
                       ? Colors.green
-                      : (widget.task.assigned?.getId == AuthController.currentUser?.getId)
+                      : (widget.task.assignedId?.getId == AuthController.currentUser?.getId)
                       ? Colors.blueAccent
                       : Colors.blueGrey
                 ),

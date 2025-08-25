@@ -173,7 +173,7 @@ class _TaskActionsState extends State<TaskActions> {
                         _handleTaskChange();
                       },
                     )
-                  : widget.task.assigned != null
+                  : widget.task.assignedId != null
                   ? InkWell(
                       child: SizedBox(
                         width: 150,

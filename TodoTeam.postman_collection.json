@@ -1,0 +1,140 @@
+{
+  "info": {
+    "_postman_id": "b1e1e1e1-1234-5678-9abc-def012345678",
+    "name": "TodoTeam API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "API collection for TodoTeam Spring Boot backend"
+  },
+  "item": [
+    {
+      "name": "Status",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/status", "host": ["{{baseUrl}}"], "path": ["status"] }
+      },
+      "response": [
+        { "code": 200, "body": "{\"status\": \"ok\"}" }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\",\n  \"username\": \"John Doe\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+          },
+          "response": [
+            { "code": 200, "body": "{\"id\": 1, \"token\": \"jwt...\"}" }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          },
+          "response": [
+            { "code": 200, "body": "{\"id\": 1, \"token\": \"jwt...\"}" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{jwt}}" } ],
+        "url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] }
+      },
+      "response": [
+        { "code": 200, "body": "[{\"id\":1,\"username\":\"John Doe\",\"email\":\"john@example.com\"}]" }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "Get Tasks",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{jwt}}" } ],
+            "url": { "raw": "{{baseUrl}}/tasks", "host": ["{{baseUrl}}"], "path": ["tasks"] }
+          },
+          "response": [
+            { "code": 200, "body": "[{\"id\":1,\"title\":\"Task 1\",\"description\":\"...\",\"priority\":\"NORMAL\",\"isCompleted\":false,\"dueDate\":1724600000,\"ownerId\":1,\"assignedId\":null,\"lastUpdate\":1724600000}]" }
+          ]
+        },
+        {
+          "name": "Get Task by ID",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{jwt}}" } ],
+            "url": { "raw": "{{baseUrl}}/tasks/1", "host": ["{{baseUrl}}"], "path": ["tasks", "1"] }
+          },
+          "response": [
+            { "code": 200, "body": "{\"id\":1,\"title\":\"Task 1\",\"description\":\"...\",\"priority\":\"NORMAL\",\"isCompleted\":false,\"dueDate\":1724600000,\"ownerId\":1,\"assignedId\":null,\"lastUpdate\":1724600000}" }
+          ]
+        },
+        {
+          "name": "Create Task",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Authorization", "value": "Bearer {{jwt}}" }, { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"New Task\",\n  \"description\": \"Description...\",\n  \"priority\": \"NORMAL\",\n  \"dueDate\": 1724600000,\n  \"assigneeId\": null\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/tasks", "host": ["{{baseUrl}}"], "path": ["tasks"] }
+          },
+          "response": [
+            { "code": 200, "body": "{\"taskId\":1}" }
+          ]
+        },
+        {
+          "name": "Update Task",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Authorization", "value": "Bearer {{jwt}}" }, { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated...\",\n  \"priority\": \"HIGH\",\n  \"dueDate\": 1724600000,\n  \"assigneeId\": 2\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/tasks/1", "host": ["{{baseUrl}}"], "path": ["tasks", "1"] }
+          },
+          "response": [
+            { "code": 200, "body": "{\"status\":\"success\"}" }
+          ]
+        },
+        {
+          "name": "Delete Task",
+          "request": {
+            "method": "DELETE",
+            "header": [ { "key": "Authorization", "value": "Bearer {{jwt}}" } ],
+            "url": { "raw": "{{baseUrl}}/tasks/1", "host": ["{{baseUrl}}"], "path": ["tasks", "1"] }
+          },
+          "response": [
+            { "code": 200, "body": "{\"status\":\"success\"}" }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "jwt", "value": "" }
+  ]
+}
+
