@@ -24,6 +24,61 @@ class Task {
     required this.updatedAt,
     required this.createdAt,
   });
+
+  // Factory method to create Task from API JSON response
+  factory Task.fromApiJson(Map<String, dynamic> json) {
+    return Task(
+      id: json['id'],
+      title: json['title'],
+      description: json['description'],
+      priority: _priorityFromString(json['priority']),
+      isCompleted: json['isCompleted'] ?? false,
+      dueDate: DateTime.fromMillisecondsSinceEpoch(json['dueDate'] * 1000), // API returns seconds, convert to milliseconds
+      ownerId: json['ownerId'],
+      assignedId: json['assignedId'] != null
+          ? User(id: json['assignedId'], username: 'Loading...', email: '')
+          : null,
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(json['lastUpdate'] * 1000),
+      createdAt: DateTime.fromMillisecondsSinceEpoch(json['dueDate'] * 1000), // Use dueDate as fallback for createdAt
+    );
+  }
+
+  static Priority _priorityFromString(String priority) {
+    switch (priority.toUpperCase()) {
+      case 'LOW':
+        return Priority.low;
+      case 'NORMAL':
+      case 'MEDIUM':
+        return Priority.medium;
+      case 'HIGH':
+        return Priority.high;
+      default:
+        return Priority.low;
+    }
+  }
+
+  // Convert Task to JSON for API requests
+  Map<String, dynamic> toApiJson() {
+    return {
+      'title': title,
+      'description': description,
+      'priority': _priorityToString(priority),
+      'dueDate': (dueDate.millisecondsSinceEpoch / 1000).round(),
+      'assigneeId': assignedId?.id,
+    };
+  }
+
+  static String _priorityToString(Priority priority) {
+    switch (priority) {
+      case Priority.low:
+        return 'LOW';
+      case Priority.medium:
+        return 'NORMAL';
+      case Priority.high:
+        return 'HIGH';
+    }
+  }
+
   void setAssignedId(User? user)=>assignedId = user;
   void setCompleted(bool value)=>isCompleted = value;
   set setDescription(String desc) => description = desc;

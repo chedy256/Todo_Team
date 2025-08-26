@@ -21,6 +21,7 @@ class TaskProvider extends ChangeNotifier {
   Future<void> loadTasks() async {
     _isLoading = true;
     _error = null;
+    notifyListeners();
 
     try {
       _tasks = await _databaseService.getTasks(
@@ -28,7 +29,8 @@ class TaskProvider extends ChangeNotifier {
         sortType: _filterSettings.sortType,
       );
     } catch (e) {
-      _error = 'Erreur lors du chargement des tâches: $e';
+      _error = 'Error loading tasks: $e';
+      debugPrint('Error loading tasks: $e');
     } finally {
       _isLoading = false;
       notifyListeners();

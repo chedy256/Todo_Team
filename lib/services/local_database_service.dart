@@ -49,20 +49,21 @@ class LocalDatabaseService {
     final databasePath = join(dbDirPath, 'master_db.db');
     final database = await openDatabase(
       databasePath,
-      version: 2,
+      version: 1,
       onCreate: (db, version) async {
         // Create users table first
         await db.execute('''
           CREATE TABLE $_usersTableName (
-            $_usersIdColumn INTEGER PRIMARY KEY AUTOINCREMENT,
+            $_usersIdColumn INTEGER PRIMARY KEY,
             $_usersNameColumn TEXT NOT NULL,
             $_usersEmailColumn TEXT NOT NULL UNIQUE
           )
         ''');
-        // Then create tasks table
+
+        // Create tasks table
         await db.execute('''
           CREATE TABLE $_tasksTableName (
-            $_tasksIdColumn INTEGER PRIMARY KEY AUTOINCREMENT,
+            $_tasksIdColumn INTEGER PRIMARY KEY,
             $_tasksTitleColumn TEXT NOT NULL,
             $_tasksDescriptionColumn TEXT NOT NULL,
             $_tasksPriorityColumn INTEGER DEFAULT 0 NOT NULL,
@@ -70,13 +71,13 @@ class LocalDatabaseService {
             $_tasksAssignedToColumn INTEGER DEFAULT NULL,
             $_tasksIsCompletedColumn INTEGER DEFAULT 0 NOT NULL,
             $_tasksDueDateColumn INTEGER NOT NULL,
-            $_tasksCreatedAtColumn INTEGER DEFAULT (strftime('%s','now')),
+            $_tasksCreatedAtColumn INTEGER DEFAULT (trimester('%s','now')),
             $_tasksUpdatedAtColumn INTEGER NOT NULL,
             FOREIGN KEY ($_tasksAssignedToColumn) REFERENCES $_usersTableName ($_usersIdColumn)
           )
         ''');
 
-        // Add pending_changes table
+        // Create pending_changes table
         await db.execute('''
           CREATE TABLE $_pendingChangesTableName (
             $_pendingChangesIdColumn INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -89,71 +90,18 @@ class LocalDatabaseService {
           )
         ''');
 
-        // Trigger to auto-remove when synced becomes 1
+        // Create trigger to auto-remove synced pending changes
         await db.execute('''
-          CREATE TRIGGER IF NOT EXISTS delete_synced_pending_changes
-          AFTER UPDATE OF synced ON $_pendingChangesTableName
+          CREATE TRIGGER delete_synced_pending_changes
+          AFTER UPDATE OF $_pendingChangesSyncedColumn ON $_pendingChangesTableName
           WHEN NEW.$_pendingChangesSyncedColumn = 1
           BEGIN
             DELETE FROM $_pendingChangesTableName WHERE $_pendingChangesIdColumn = NEW.$_pendingChangesIdColumn;
-          END;
-        ''');
-
-        await _insertDefaultUsers(db);
-      },
-      onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 2) {
-          await db.execute('''
-            CREATE TABLE $_usersTableName (
-              $_usersIdColumn INTEGER PRIMARY KEY AUTOINCREMENT,
-              $_usersNameColumn TEXT NOT NULL,
-              $_usersEmailColumn TEXT NOT NULL UNIQUE
-            )
-          ''');
-
-          await _insertDefaultUsers(db);
-        }
-        // Ensure pending_changes table exists on upgrade
-        await db.execute('''
-          CREATE TABLE IF NOT EXISTS $_pendingChangesBeforeChangeColumn (
-            $_pendingChangesIdColumn INTEGER PRIMARY KEY AUTOINCREMENT,
-            $_pendingChangesTaskIdColumn INTEGER,
-            $_pendingChangesChangeTypeColumn TEXT,
-            $_pendingChangesBeforeChangeColumn TEXT,
-            $_pendingChangesAfterChangeColumn TEXT,
-            $_pendingChangesTimestampColumn INTEGER,
-            $_pendingChangesSyncedColumn INTEGER DEFAULT 0
-          )
-        ''');
-
-        await db.execute('''
-          CREATE TRIGGER IF NOT EXISTS delete_synced_pending_changes
-          AFTER UPDATE OF synced ON $_pendingChangesTableName
-          WHEN NEW.$_pendingChangesSyncedColumn = 1
-          BEGIN
-            DELETE FROM $_pendingChangesTableName WHERE $_pendingChangesIdColumn = NEW.$_pendingChangesIdColumn;
-          END;
+          END
         ''');
       },
     );
     return database;
-  }
-
-  Future<void> _insertDefaultUsers(Database db) async {
-    final defaultUsers = [
-      {'name': 'Bilel', 'email': 'bilel@email.com'},
-      {'name': 'Yacine', 'email': 'yacine@email.com'},
-      {'name': 'Mohamed', 'email': 'mohamed@email.com'},
-      {'name': 'Samira', 'email': 'samira@email.com'},
-      {'name': 'Marwa', 'email': 'marwa@email.com'},
-      {'name': 'Ferdaous', 'email': 'ferdous@email.com'},
-      {'name': 'Samir', 'email': 'samir@email.com'},
-      {'name': 'admin', 'email': 'admin@email.com'},
-    ];
-
-    for (final user in defaultUsers) {
-      await db.insert(_usersTableName, user);
-    }
   }
 
   Future<int> addTask(Task task) async {
@@ -342,5 +290,52 @@ class LocalDatabaseService {
 
   Future<void> refreshUserCache() async {
     _userCache = await getUsers();
+  }
+
+  // Add methods for user synchronization with API
+  Future<void> syncUsersFromApi(List<User> apiUsers) async {
+    final db = await database;
+
+    // Clear existing users (except default ones if needed)
+    await db.delete(_usersTableName);
+
+    // Insert users from API
+    for (final user in apiUsers) {
+      await db.insert(
+        _usersTableName,
+        {
+          _usersIdColumn: user.id,
+          _usersNameColumn: user.username,
+          _usersEmailColumn: user.email,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+
+    // Refresh the cache after sync
+    await refreshUserCache();
+  }
+
+  Future<void> addOrUpdateUser(User user) async {
+    final db = await database;
+    await db.insert(
+      _usersTableName,
+      {
+        _usersIdColumn: user.id,
+        _usersNameColumn: user.username,
+        _usersEmailColumn: user.email,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+
+    // Refresh the cache after adding/updating
+    await refreshUserCache();
+  }
+
+  Future<bool> hasUsers() async {
+    final db = await database;
+    final result = await db.rawQuery('SELECT COUNT(*) as count FROM $_usersTableName');
+    final count = result.first['count'] as int;
+    return count > 0;
   }
 }

@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:project/controllers/auth_controller.dart';
 import 'package:project/models/api_model.dart';
+import 'package:project/models/user_model.dart';
+import 'package:project/services/local_database_service.dart';
 import 'package:project/services/secure_storage.dart';
 
 import '../main.dart';
@@ -97,7 +99,6 @@ class ApiService {
       setAuthToken(token);
 
       try {
-        // Fetch user details using the users endpoint
         final userDetails = await _fetchUserDetails(userId);
 
         final currentUser = CurrentUser(
@@ -151,13 +152,54 @@ class ApiService {
     }
   }
 
+  static Future<List<User>> fetchUsers() async {
+    final url = '$baseUrl${ApiModel.users}';
+    debugPrint('GET $url');
+
+    final response = await http
+        .get(
+          Uri.parse(url),
+          headers: _headers,
+        )
+        .timeout(Duration(seconds: 5));
+
+    debugPrint('Response: ${response.statusCode} ${response.body}');
+
+    if (response.statusCode == 200) {
+      final List<dynamic> usersJson = jsonDecode(response.body);
+      final List<User> apiUsers = usersJson.map((userJson) => User.fromJson(userJson)).toList();
+
+      // Sync the fetched users with local database
+      await LocalDatabaseService.instance.syncUsersFromApi(apiUsers);
+
+      return apiUsers;
+    } else {
+      throw Exception('Failed to fetch users: ${response.body}');
+    }
+  }
+
+  // Get users from local database with API fallback
+  static Future<List<User>> getUsers({bool forceRefresh = false}) async {
+    final localDb = LocalDatabaseService.instance;
+
+    // If force refresh is requested or no users exist locally, fetch from API
+    if (forceRefresh || !(await localDb.hasUsers())) {
+      try {
+        // Try to fetch from API and sync to local database
+        return await fetchUsers();
+      } catch (e) {
+        debugPrint('Failed to fetch users from API: $e');
+        // If API fails, return local users (might be empty)
+        return await localDb.getUsers();
+      }
+    }
+
+    // Return users from local database
+    return await localDb.getUsers();
+  }
   static Future<void> logout() async {
     await _secureStorage.deleteToken();
     _authToken = null;
-  }
-
-  static Future<String?> getStoredToken() async {
-    return await _secureStorage.readToken();
   }
 
   static Future<bool> isTokenValid() async {

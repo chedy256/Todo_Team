@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:project/services/notif_service.dart';
 import 'package:project/controllers/task_provider.dart';
+import 'package:project/controllers/user_provider.dart';
 import 'package:project/controllers/auth_controller.dart';
 import 'package:project/services/secure_storage.dart';
 import 'package:project/views/auth/login_screen.dart';
@@ -40,6 +41,7 @@ class _MyAppState extends State<MyApp> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => TaskProvider()),
+        ChangeNotifierProvider(create: (context) => UserProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

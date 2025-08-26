@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:project/controllers/auth_controller.dart';
 import 'package:project/controllers/task_provider.dart';
+import 'package:project/controllers/user_provider.dart';
 import 'package:project/models/task_filter.dart';
 
 import '../widgets/item_widget.dart';
@@ -19,6 +20,8 @@ class _TasksScreenState extends State<TasksScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Load both users and tasks when the screen initializes
+      context.read<UserProvider>().loadUsers();
       context.read<TaskProvider>().loadTasks();
     });
   }
