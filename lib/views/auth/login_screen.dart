@@ -45,9 +45,9 @@ class _LoginScreenState extends State<LoginScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 colors: [
-                  Colors.blueAccent.shade700,
-                  Colors.blue,
+                  Colors.pinkAccent.shade100,
                   Colors.lightBlueAccent.shade100,
+                  Colors.blue.shade500,
                 ],
               ),
             ),
@@ -151,8 +151,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           color: Colors.white,
                         ),
                       ),
+
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.lightBlueAccent.shade700,
+                        backgroundColor: Colors.blue.shade700,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -164,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 Expanded(
-                  child: Container(
+                  child:  Padding(
                     padding: const EdgeInsets.only(left: 12),
                     child: ElevatedButton(
                       onPressed: () =>{
@@ -176,7 +177,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         )
                       }, //authController.login(context),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.lightBlueAccent.shade700,
+                        backgroundColor: Colors.blue.shade700,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -202,7 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-              ],
+                ],
             ),
           ),
         ],

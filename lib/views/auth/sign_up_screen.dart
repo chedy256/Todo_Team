@@ -64,9 +64,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 colors: [
-                  Colors.blueAccent.shade700,
-                  Colors.blue,
+                  Colors.pinkAccent.shade100,
                   Colors.lightBlueAccent.shade100,
+                  Colors.blue.shade500,
                 ],
               ),
             ),
@@ -236,7 +236,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.lightBlueAccent.shade700,
+                        backgroundColor: Colors.blue.shade700,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -265,7 +265,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.lightBlueAccent.shade700,
+                        backgroundColor: Colors.blue.shade700,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
