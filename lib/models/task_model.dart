@@ -43,22 +43,8 @@ class Task {
     );
   }
 
-  static Priority _priorityFromString(String priority) {
-    switch (priority.toUpperCase()) {
-      case 'LOW':
-        return Priority.low;
-      case 'NORMAL':
-      case 'MEDIUM':
-        return Priority.medium;
-      case 'HIGH':
-        return Priority.high;
-      default:
-        return Priority.low;
-    }
-  }
-
   // Convert Task to JSON for API requests
-  Map<String, dynamic> toApiJson() {
+  Map<String, dynamic> toJson() {
     return {
       'title': title,
       'description': description,
@@ -76,6 +62,19 @@ class Task {
         return 'NORMAL';
       case Priority.high:
         return 'HIGH';
+    }
+  }
+  static Priority _priorityFromString(String priority) {
+    switch (priority.toUpperCase()) {
+      case 'LOW':
+        return Priority.low;
+      case 'NORMAL':
+      case 'MEDIUM':
+        return Priority.medium;
+      case 'HIGH':
+        return Priority.high;
+      default:
+        return Priority.low;
     }
   }
 

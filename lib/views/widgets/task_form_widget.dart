@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:project/models/task_model.dart';
 import 'package:project/models/user_model.dart';
 import 'package:project/controllers/auth_controller.dart';
+import 'package:project/controllers/user_provider.dart';
 import 'package:project/services/local_database_service.dart';
 
 class TaskFormWidget extends StatefulWidget {
@@ -36,37 +38,60 @@ class _TaskFormWidgetState extends State<TaskFormWidget> {
   @override
   void initState() {
     super.initState();
-    _loadUsers();
     _initializeControllers();
+    // Defer the user loading until after the widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadUsers();
+    });
   }
 
   Future<void> _loadUsers() async {
     try {
-      _availableUsers = await LocalDatabaseService.instance.getUsers();
-      setState(() {});
+      // Try to refresh users from API first
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      await userProvider.refreshUsers();
+
+      // Get the updated users from the provider
+      _availableUsers = userProvider.users;
+
+      if (mounted) setState(() {});
     } catch (e) {
-      _availableUsers = users;
+      // If refresh fails, fallback to local database
+      debugPrint('Failed to refresh users from API: $e');
+      try {
+        _availableUsers = await LocalDatabaseService.instance.getUsers();
+        if (mounted) setState(() {});
+      } catch (localError) {
+        debugPrint('Failed to load users from local database: $localError');
+        _availableUsers = []; // Empty list if all fails
+        if (mounted) setState(() {});
+      }
     }
   }
 
   void _initializeControllers() {
     final task = widget.initialTask;
-    
+
     _titleController = TextEditingController(text: task?.title ?? '');
     _descriptionController = TextEditingController(text: task?.description ?? '');
-    _assignedController = TextEditingController(); 
+    _assignedController = TextEditingController();
     _dateController = TextEditingController();
     _timeController = TextEditingController();
-    
+
     _priority = task?.priority ?? Priority.low;
     _assignedUser = task?.assignedId;
-    
+
     if (_assignedUser != null) {
-      _assignedController.text = _assignedUser!.username;
-    } else if (task != null && task.assignedId == null) {
+      // Show username (email) for other users, just username for current user
+      if (_assignedUser?.id == AuthController.currentUser?.id) {
+        _assignedController.text = _assignedUser!.username;
+      } else {
+        _assignedController.text = '${_assignedUser!.username} (${_assignedUser!.email})';
+      }
+    } else {
       _assignedController.text = "personne";
     }
-    
+
     if (task?.dueDate != null) {
       _pickedDate = task!.dueDate;
       _pickedTime = TimeOfDay.fromDateTime(task.dueDate);
@@ -173,7 +198,7 @@ class _TaskFormWidgetState extends State<TaskFormWidget> {
 
   Widget _buildAssignedSection() {
     bool isTaskAlreadyAssigned = widget.initialTask?.assignedId != null;
-    
+
     return Column(
       children: [
         const Text(
@@ -187,11 +212,11 @@ class _TaskFormWidgetState extends State<TaskFormWidget> {
           enabled: !isTaskAlreadyAssigned, // Disable if already assigned
           decoration: InputDecoration(
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-            labelText: isTaskAlreadyAssigned 
-                ? "Personne assignée" 
+            labelText: isTaskAlreadyAssigned
+                ? "Personne assignée"
                 : "Selectionnez la personne",
-            hintText: !isTaskAlreadyAssigned 
-                ? "Tapez pour sélectionner" 
+            hintText: !isTaskAlreadyAssigned
+                ? "Tapez pour sélectionner"
                 : null,
             labelStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             disabledBorder: OutlineInputBorder(
@@ -211,16 +236,20 @@ class _TaskFormWidgetState extends State<TaskFormWidget> {
               setState(() {
                 if (result == 'personne') {
                   _assignedUser = null;
-                  _assignedController.text = '';
-                } else if (result.startsWith('Moi même:')) {
-                  _assignedUser = AuthController.currentUser;
-                  _assignedController.text = AuthController.currentUser?.username ?? '';
+                  _assignedController.text = 'personne';
                 } else {
+                  // Extract username from "username (email)" format
+                  final username = result.split(' (').first;
                   _assignedUser = _availableUsers.firstWhere(
-                    (user) => user.username == result,
+                    (user) => user.username == username,
                     orElse: () => _availableUsers.isNotEmpty ? _availableUsers.first : User(id: 0, username: 'personne', email: ''),
                   );
-                  _assignedController.text = _assignedUser?.username ?? '';
+
+                  if (_assignedUser?.id == AuthController.currentUser?.id) {
+                    _assignedController.text = 'moi même: ${_assignedUser!.username}';
+                  } else {
+                    _assignedController.text = '${_assignedUser!.username} (${_assignedUser!.email})';
+                  }
                 }
               });
             }
@@ -363,20 +392,17 @@ class _TaskFormWidgetState extends State<TaskFormWidget> {
 
 class CustomSearchDelegate extends SearchDelegate<String> {
   final List<User> availableUsers;
-  
+
   CustomSearchDelegate(this.availableUsers);
-  
+
   List<String> get searchTerms {
     List<String> terms = ['personne'];
-    
-    if (AuthController.currentUser != null) {
-      terms.add('Moi même: ${AuthController.currentUser!.username}');
-    }
-    
+
+    // Add all users (including current user) with email format
     for (User user in availableUsers) {
-      terms.add(user.username);
+      terms.add('${user.username} (${user.email})');
     }
-    
+
     return terms;
   }
 
@@ -408,15 +434,30 @@ class CustomSearchDelegate extends SearchDelegate<String> {
     final matchingTerms = searchTerms
         .where((term) => term.toLowerCase().contains(query.toLowerCase()))
         .toList();
-    
+
     return ListView.builder(
       itemCount: matchingTerms.length,
       itemBuilder: (context, index) {
+        final term = matchingTerms[index];
         return ListTile(
-          title: Text(matchingTerms[index]),
-          onTap: () => close(context, matchingTerms[index]),
+          title: Text(
+            term,
+            style: const TextStyle(fontSize: 16),
+          ),
+          leading: _buildLeadingIcon(term),
+          onTap: () => close(context, term),
         );
       },
     );
+  }
+
+  Widget _buildLeadingIcon(String term) {
+    if (term == 'personne') {
+      return const Icon(Icons.person_off, color: Colors.grey);
+    } else if (term.contains('(${AuthController.currentUser?.email})')) {
+      return const Icon(Icons.person, color: Colors.blue);
+    } else {
+      return const Icon(Icons.person_outline, color: Colors.green);
+    }
   }
 }

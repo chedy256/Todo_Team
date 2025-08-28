@@ -53,24 +53,6 @@ class _TasksScreenState extends State<TasksScreen> {
           const SizedBox(width: 6),
           const Icon(Icons.wifi, color: Colors.green, size: 20),
           const SizedBox(width: 18),
-          /*
-          // depending on the connectivity status: online or offline (and api server status)
-          const Text(
-            'Serveur indisponible',
-            style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(width: 6),
-          const Icon(Icons.perm_data_setting_outlined, color: Colors.orange, size: 20),
-          const SizedBox(width: 18),
-          */
-          /*const Text(
-            'Hors ligne',
-            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(width: 6),
-          const Icon(Icons.wifi_off, color: Colors.red, size: 20),
-          const SizedBox(width: 18),
-          */
         ],
       ),
       body: SafeArea(
@@ -203,12 +185,8 @@ class _TasksScreenState extends State<TasksScreen> {
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
-              final taskProvider = Provider.of<TaskProvider>(
-                context,
-                listen: false,
-              );
-              taskProvider.clearError();
-              taskProvider.refreshTasks();
+              context.read<TaskProvider>().clearError();
+              context.read<TaskProvider>().refreshTasks();
             },
             child: const Text('Réessayer'),
           ),
@@ -217,7 +195,7 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
-  Widget _buildEmptyState(TaskStatus status){
+  Widget _buildEmptyState(TaskStatus status) {
     String message;
     IconData icon;
 
@@ -256,10 +234,8 @@ class _TasksScreenState extends State<TasksScreen> {
   }
 
   void _onFilterSelected(TaskStatus status) {
-    final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-    taskProvider.filterTasks(status);
+    context.read<TaskProvider>().filterTasks(status);
   }
-
   void _refreshTasksList() {
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
     taskProvider.refreshTasks();

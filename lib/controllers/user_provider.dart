@@ -20,35 +20,16 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      if (!forceRefresh) {
-        _users = await _databaseService.getUsers();
-        
-        // If no users in local database, fetch from API
-        if (_users.isEmpty) {
-          await _fetchUsersFromApi();
-        }
-      } else {
-        // Force refresh from API
-        await _fetchUsersFromApi();
-      }
+      // Use the new ApiService.getUsers method that handles API fetching and local database fallback
+      _users = await ApiService.getUsers(forceRefresh: forceRefresh);
     } catch (e) {
       _error = 'Error loading users: $e';
       debugPrint('Error loading users: $e');
+      // Final fallback to empty list if everything fails
+      _users = [];
     } finally {
       _isLoading = false;
       notifyListeners();
-    }
-  }
-
-  Future<void> _fetchUsersFromApi() async {
-    try {
-      _users = await ApiService.fetchUsers();
-    } catch (e) {
-      // If API fails, try to get users from local database as fallback
-      _users = await _databaseService.getUsers();
-      if (_users.isEmpty) {
-        rethrow; // Re-throw if we have no fallback data
-      }
     }
   }
 

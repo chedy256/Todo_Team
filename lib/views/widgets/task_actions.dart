@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+//import 'package:project/models/current_user.dart';
 import 'package:project/services/dialogs_service.dart';
 
 import '../../controllers/auth_controller.dart';
@@ -125,7 +126,7 @@ class _TaskActionsState extends State<TaskActions> {
                       ),
                       onTap: () async {
                         TaskActions.isBottomSheetOpen = false;
-                        Navigator.pop(context); // Close the bottom sheet first
+                        Navigator.pop(context);
                         final result = await Navigator.push(
                           context,
                           MaterialPageRoute(

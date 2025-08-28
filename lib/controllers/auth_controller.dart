@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:project/services/dialogs_service.dart';
+import 'package:project/services/notif_service.dart';
 
 import '../models/current_user.dart';
 import '../services/online_service.dart';
@@ -83,6 +84,7 @@ class AuthController {
 
   Future<void> logout(BuildContext context) async {
     await ApiService.logout();
+    NotifService().cancelAllNotifications();
     currentUser = null;
     if (context.mounted) Navigator.pushReplacementNamed(context, '/login');
   }
