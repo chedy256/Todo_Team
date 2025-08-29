@@ -152,12 +152,23 @@ class _TaskFormWidgetState extends State<TaskFormWidget> {
   }
 
   Widget _buildTitleField() {
+    bool isEditingMode = widget.initialTask != null;
+
     return TextField(
       controller: _titleController,
-      decoration: const InputDecoration(
-        border: OutlineInputBorder(),
+      readOnly: isEditingMode,
+      enabled: !isEditingMode,
+      decoration: InputDecoration(
+        border: const OutlineInputBorder(),
         labelText: 'Titre',
-        labelStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        labelStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        disabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.grey.shade400),
+        ),
+      ),
+      style: TextStyle(
+        color: isEditingMode ? Colors.grey.shade700 : Colors.black,
+        fontWeight: isEditingMode ? FontWeight.w500 : FontWeight.normal,
       ),
     );
   }
