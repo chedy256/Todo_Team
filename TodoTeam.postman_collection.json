@@ -3,7 +3,7 @@
     "_postman_id": "b1e1e1e1-1234-5678-9abc-def012345678",
     "name": "TodoTeam API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "API collection for TodoTeam Spring Boot backend"
+    "description": "API collection for TodoTeam Spring Boot backend. Features include task management, completion tracking, self-assignment, and role-based access control."
   },
   "item": [
     {
@@ -74,7 +74,7 @@
             "url": { "raw": "{{baseUrl}}/tasks", "host": ["{{baseUrl}}"], "path": ["tasks"] }
           },
           "response": [
-            { "code": 200, "body": "[{\"id\":1,\"title\":\"Task 1\",\"description\":\"...\",\"priority\":\"NORMAL\",\"isCompleted\":false,\"dueDate\":1724600000,\"ownerId\":1,\"assignedId\":null,\"lastUpdate\":1724600000}]" }
+            { "code": 200, "body": "[{\"id\":1,\"title\":\"Task 1\",\"description\":\"...\",\"priority\":\"NORMAL\",\"completed\":false,\"dueDate\":1724600000,\"ownerId\":1,\"assignedId\":null,\"lastUpdate\":1724600000}]" }
           ]
         },
         {
@@ -85,7 +85,7 @@
             "url": { "raw": "{{baseUrl}}/tasks/1", "host": ["{{baseUrl}}"], "path": ["tasks", "1"] }
           },
           "response": [
-            { "code": 200, "body": "{\"id\":1,\"title\":\"Task 1\",\"description\":\"...\",\"priority\":\"NORMAL\",\"isCompleted\":false,\"dueDate\":1724600000,\"ownerId\":1,\"assignedId\":null,\"lastUpdate\":1724600000}" }
+            { "code": 200, "body": "{\"id\":1,\"title\":\"Task 1\",\"description\":\"...\",\"priority\":\"NORMAL\",\"completed\":false,\"dueDate\":1724600000,\"ownerId\":1,\"assignedId\":null,\"lastUpdate\":1724600000}" }
           ]
         },
         {
@@ -110,7 +110,37 @@
             "header": [ { "key": "Authorization", "value": "Bearer {{jwt}}" }, { "key": "Content-Type", "value": "application/json" } ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"description\": \"Updated...\",\n  \"priority\": \"HIGH\",\n  \"dueDate\": 1724600000,\n  \"assigneeId\": 2\n}"
+              "raw": "{\n  \"description\": \"Updated...\",\n  \"priority\": \"HIGH\",\n  \"dueDate\": 1724600000,\n  \"assigneeId\": 2,\n  \"completed\": false\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/tasks/1", "host": ["{{baseUrl}}"], "path": ["tasks", "1"] }
+          },
+          "response": [
+            { "code": 200, "body": "{\"status\":\"success\"}" }
+          ]
+        },
+        {
+          "name": "Update Task Completion (Assignee/Owner)",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Authorization", "value": "Bearer {{jwt}}" }, { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"completed\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/tasks/1", "host": ["{{baseUrl}}"], "path": ["tasks", "1"] }
+          },
+          "response": [
+            { "code": 200, "body": "{\"status\":\"success\"}" }
+          ]
+        },
+        {
+          "name": "Self-Assign to Task",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Authorization", "value": "Bearer {{jwt}}" }, { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assigneeId\": {{userId}}\n}"
             },
             "url": { "raw": "{{baseUrl}}/tasks/1", "host": ["{{baseUrl}}"], "path": ["tasks", "1"] }
           },
@@ -134,7 +164,8 @@
   ],
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8080" },
-    { "key": "jwt", "value": "" }
+    { "key": "jwt", "value": "" },
+    { "key": "userId", "value": "" }
   ]
 }
 
