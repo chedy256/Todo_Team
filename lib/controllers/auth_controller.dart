@@ -20,25 +20,22 @@ class AuthController {
       },
     );
 
-    try {
-      final user = await ApiService.login(email: email, password: password);
-      currentUser = user;
+    final result = await ApiService.login(email: email, password: password);
 
-      if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
+    if (context.mounted) {
+      Navigator.of(context).pop(); // Close loading dialog
+
+      if (result.isSuccess) {
+        currentUser = result.data;
         Navigator.pushNamedAndRemoveUntil(
           context,
           '/tasks',
           (route) => false,
         );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
-        DialogService.showInfoDialog(
+      } else {
+        DialogService.showErrorDialog(
           context,
-          'Connexion échouée',
-          'Email ou mot de passe incorrect'
+          result.errorMessage ?? 'Erreur de connexion inconnue'
         );
       }
     }
@@ -58,26 +55,27 @@ class AuthController {
       },
     );
 
-    try {
-      final user = await ApiService.register(
-        email: email,
-        password: password,
-        username: name
-      );
-      currentUser = user;
+    final result = await ApiService.register(
+      email: email,
+      password: password,
+      username: name
+    );
 
-      if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
+    if (context.mounted) {
+      Navigator.of(context).pop(); // Close loading dialog
+
+      if (result.isSuccess) {
+        currentUser = result.data;
         Navigator.pushNamedAndRemoveUntil(
           context,
           '/tasks',
           (route) => false,
         );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
-        DialogService.showErrorDialog(context, e.toString());
+      } else {
+        DialogService.showErrorDialog(
+          context,
+          result.errorMessage ?? 'Erreur d\'inscription inconnue'
+        );
       }
     }
   }

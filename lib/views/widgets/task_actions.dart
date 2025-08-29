@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-//import 'package:project/models/current_user.dart';
 import 'package:project/services/dialogs_service.dart';
-
+import 'package:project/services/online_service.dart';
+import 'package:project/utils/utils.dart';
 import '../../controllers/auth_controller.dart';
 import '../../models/task_model.dart';
 import '../../services/local_database_service.dart';
@@ -15,8 +15,8 @@ class TaskActions extends StatefulWidget {
   static bool isBottomSheetOpen = false;
 
   const TaskActions({
-    super.key, 
-    required this.task, 
+    super.key,
+    required this.task,
     this.onTaskChanged,
     this.onTaskDeleted,
   });
@@ -34,10 +34,27 @@ class _TaskActionsState extends State<TaskActions> {
     }
   }
 
-  void _handleTaskDelete() {
-    if (mounted) {
-      widget.onTaskDeleted?.call(); // This will refresh the entire task list
-      Navigator.pop(context);
+  void _handleTaskDelete() async {
+    final result = await ApiService.deleteTask(widget.task.getId);
+
+    if (result.isSuccess) {
+      // Cancel the notification for this task
+      await NotifService().cancelNotification(widget.task.getId);
+
+      if (mounted) {
+        widget.onTaskDeleted?.call(); // This will refresh the entire task list
+        Navigator.pop(context);
+        Utils.showSuccessSnackBar(context, 'Tâche supprimée avec succès');
+      }
+    } else {
+      // Show error in SnackBar if deletion failed (except authentication errors)
+      if (mounted) {
+        Navigator.pop(context); // Close the bottom sheet first
+        Utils.showErrorSnackBar(
+          context,
+          result.errorMessage ?? 'Erreur lors de la suppression de la tâche',
+        );
+      }
     }
   }
 
@@ -57,91 +74,124 @@ class _TaskActionsState extends State<TaskActions> {
             icon: const Icon(Icons.close, size: 30),
           ),
           (AuthController.currentUser!.id == widget.task.ownerId)
-              ? Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    InkWell(
-                      child: SizedBox(
-                        width: 150,
-                        height: 70,
-                        child: Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            spacing: 10,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.delete,
-                                color: Colors.red,
-                                size: 30,
+              ? (widget.task.assignedId == null || widget.task.isCompleted)
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          InkWell(
+                            child: SizedBox(
+                              width: 150,
+                              height: 70,
+                              child: Card(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  spacing: 10,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.delete,
+                                      color: Colors.red,
+                                      size: 30,
+                                    ),
+                                    const Text("Supprimer"),
+                                  ],
+                                ),
                               ),
-                              const Text("Supprimer"),
-                            ],
+                            ),
+                            onTap: () async {
+                              if (await DialogService.showConfirmationDialog(
+                                context,
+                                "Confirmation",
+                                'êtes-vous sûr de vouloir supprimer cette tâche ?',
+                              )) {
+                                TaskActions.isBottomSheetOpen = false;
+                                _handleTaskDelete(); // Use delete handler for list refresh
+                              } else {
+                                return;
+                              }
+                            },
+                          ),
+                          InkWell(
+                            child: SizedBox(
+                              width: 150,
+                              height: 70,
+                              child: Card(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  spacing: 10,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.edit,
+                                      color: Colors.blue,
+                                      size: 30,
+                                    ),
+                                    const Text("Modifier"),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            onTap: () async {
+                              TaskActions.isBottomSheetOpen = false;
+                              Navigator.pop(context);
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      EditTaskScreen(task: widget.task),
+                                ),
+                              );
+                              if (result == true) {
+                                // For task edits, we need to refresh the parent list to get updated task data
+                                widget.onTaskChanged?.call();
+                              }
+                            },
+                          ),
+                        ],
+                      )
+                    : InkWell(
+                        child: SizedBox(
+                          width: 150,
+                          height: 70,
+                          child: Card(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              spacing: 10,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.edit,
+                                  color: Colors.blue,
+                                  size: 30,
+                                ),
+                                const Text("Modifier"),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      onTap: () async {
-                        if (await DialogService.showConfirmationDialog(
-                          context,
-                          "Confirmation",
-                          'êtes-vous sûr de vouloir supprimer cette tâche ?',
-                        )) {
+                        onTap: () async {
                           TaskActions.isBottomSheetOpen = false;
-                          
-                          // Cancel the notification for this task
-                          await NotifService().cancelNotification(widget.task.getId);
-                          
-                          // Delete the task from database
-                          await databaseService.deleteTask(widget.task.getId);
-                          
-                          _handleTaskDelete(); // Use delete handler for list refresh
-                        } else {
-                          return;
-                        }
-                      },
-                    ),
-                    InkWell(
-                      child: SizedBox(
-                        width: 150,
-                        height: 70,
-                        child: Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            spacing: 10,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.edit,
-                                color: Colors.blue,
-                                size: 30,
-                              ),
-                              const Text("Modifier"),
-                            ],
-                          ),
-                        ),
-                      ),
-                      onTap: () async {
-                        TaskActions.isBottomSheetOpen = false;
-                        Navigator.pop(context);
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => EditTaskScreen(task: widget.task),
-                          ),
-                        );
-                        if (result == true) {
-                          // For task edits, we need to refresh the parent list to get updated task data
-                          widget.onTaskChanged?.call();
-                        }
-                      },
-                    ),
-                  ],
-                )
-              : const SizedBox(),
+                          Navigator.pop(context);
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  EditTaskScreen(task: widget.task),
+                            ),
+                          );
+                          if (result == true) {
+                            // For task edits, we need to refresh the parent list to get updated task data
+                            widget.onTaskChanged?.call();
+                          }
+                        },
+                      )
+              : const SizedBox.shrink(),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -168,9 +218,18 @@ class _TaskActionsState extends State<TaskActions> {
                           ),
                         ),
                       ),
-                      onTap: () {
+                      onTap: () async {
                         widget.task.setCompleted(false);
+                        widget.task.updatedAt = DateTime.now();
                         databaseService.updateTask(widget.task);
+
+                        final result = await ApiService.updateTask(widget.task);
+                        if (!result.isSuccess && context.mounted) {
+                          Utils.showErrorSnackBar(
+                            context,
+                            result.errorMessage ?? 'Erreur lors de la mise à jour de la tâche',
+                          );
+                        }
                         _handleTaskChange();
                       },
                     )
@@ -197,9 +256,18 @@ class _TaskActionsState extends State<TaskActions> {
                           ),
                         ),
                       ),
-                      onTap: () {
+                      onTap: () async {
                         widget.task.setCompleted(true);
+                        widget.task.updatedAt = DateTime.now();
                         databaseService.updateTask(widget.task);
+
+                        final result = await ApiService.updateTask(widget.task);
+                        if (!result.isSuccess && context.mounted) {
+                          Utils.showErrorSnackBar(
+                            context,
+                            result.errorMessage ?? 'Erreur lors de la mise à jour de la tâche',
+                          );
+                        }
                         _handleTaskChange();
                       },
                     )
@@ -228,9 +296,18 @@ class _TaskActionsState extends State<TaskActions> {
                           ),
                         ),
                       ),
-                      onTap: () {
+                      onTap: () async {
                         widget.task.setAssignedId(AuthController.currentUser);
+                        widget.task.updatedAt = DateTime.now();
                         databaseService.updateTask(widget.task);
+
+                        final result = await ApiService.updateTask(widget.task);
+                        if (!result.isSuccess && context.mounted) {
+                          Utils.showErrorSnackBar(
+                            context,
+                            result.errorMessage ?? 'Erreur lors de la mise à jour de la tâche',
+                          );
+                        }
                         _handleTaskChange();
                       },
                     ),

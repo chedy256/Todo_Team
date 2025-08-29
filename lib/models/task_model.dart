@@ -32,7 +32,7 @@ class Task {
       title: json['title'],
       description: json['description'],
       priority: _priorityFromString(json['priority']),
-      isCompleted: json['isCompleted'] ?? false,
+      isCompleted: json['completed'] ?? false,
       dueDate: DateTime.fromMillisecondsSinceEpoch(json['dueDate'] * 1000), // API returns seconds, convert to milliseconds
       ownerId: json['ownerId'],
       assignedId: json['assignedId'] != null
@@ -45,13 +45,20 @@ class Task {
 
   // Convert Task to JSON for API requests
   Map<String, dynamic> toJson() {
-    return {
+    final json = <String, dynamic>{
       'title': title,
       'description': description,
       'priority': _priorityToString(priority),
       'dueDate': (dueDate.millisecondsSinceEpoch / 1000).round(),
-      'assigneeId': assignedId?.id,
+      'completed': isCompleted,
     };
+    
+    // Only include assigneeId if there's an assigned user
+    if (assignedId != null) {
+      json['assigneeId'] = assignedId!.id;
+    }
+    
+    return json;
   }
 
   static String _priorityToString(Priority priority) {
@@ -88,4 +95,6 @@ class Task {
   int get getOwnerId => ownerId;
   int get getId => id!;
   DateTime get getDueDate => dueDate;
+
+  void operator [](String other) {}
 }

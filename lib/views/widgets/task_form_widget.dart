@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:project/models/task_model.dart';
 import 'package:project/models/user_model.dart';
 import 'package:project/controllers/auth_controller.dart';
-import 'package:project/controllers/user_provider.dart';
 import 'package:project/services/local_database_service.dart';
 
 class TaskFormWidget extends StatefulWidget {
@@ -39,33 +37,49 @@ class _TaskFormWidgetState extends State<TaskFormWidget> {
   void initState() {
     super.initState();
     _initializeControllers();
-    // Defer the user loading until after the widget is built
+    // Load users from local database only (no API fetching for edit screen)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadUsers();
+      _loadUsersFromLocal();
     });
   }
 
-  Future<void> _loadUsers() async {
+  Future<void> _loadUsersFromLocal() async {
     try {
-      // Try to refresh users from API first
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      await userProvider.refreshUsers();
+      // Load users only from local database
+      _availableUsers = await LocalDatabaseService.instance.getUsers();
 
-      // Get the updated users from the provider
-      _availableUsers = userProvider.users;
+      // If we have an assigned user from the task, try to find their full details
+      if (widget.initialTask?.assignedId != null) {
+        final assignedUserId = widget.initialTask!.assignedId!.id;
+        final fullUserData = _availableUsers.firstWhere(
+          (user) => user.id == assignedUserId,
+          orElse: () => widget.initialTask!.assignedId!, // Keep the original if not found
+        );
 
-      if (mounted) setState(() {});
-    } catch (e) {
-      // If refresh fails, fallback to local database
-      debugPrint('Failed to refresh users from API: $e');
-      try {
-        _availableUsers = await LocalDatabaseService.instance.getUsers();
-        if (mounted) setState(() {});
-      } catch (localError) {
-        debugPrint('Failed to load users from local database: $localError');
-        _availableUsers = []; // Empty list if all fails
+        setState(() {
+          _assignedUser = fullUserData;
+          _updateAssignedController();
+        });
+      } else {
         if (mounted) setState(() {});
       }
+    } catch (e) {
+      debugPrint('Failed to load users from local database: $e');
+      _availableUsers = []; // Empty list if all fails
+      if (mounted) setState(() {});
+    }
+  }
+
+  void _updateAssignedController() {
+    if (_assignedUser != null) {
+      // Show username (email) for other users, just username for current user
+      if (_assignedUser?.id == AuthController.currentUser?.id) {
+        _assignedController.text = _assignedUser!.username;
+      } else {
+        _assignedController.text = '${_assignedUser!.username} (${_assignedUser!.email})';
+      }
+    } else {
+      _assignedController.text = "personne";
     }
   }
 
@@ -81,12 +95,13 @@ class _TaskFormWidgetState extends State<TaskFormWidget> {
     _priority = task?.priority ?? Priority.low;
     _assignedUser = task?.assignedId;
 
+    // Initialize assigned controller with a placeholder if we have an assigned user
     if (_assignedUser != null) {
-      // Show username (email) for other users, just username for current user
-      if (_assignedUser?.id == AuthController.currentUser?.id) {
-        _assignedController.text = _assignedUser!.username;
+      // Check if this is a placeholder user with "Loading..." username
+      if (_assignedUser!.username == 'Loading...') {
+        _assignedController.text = "Chargement...";
       } else {
-        _assignedController.text = '${_assignedUser!.username} (${_assignedUser!.email})';
+        _updateAssignedController();
       }
     } else {
       _assignedController.text = "personne";

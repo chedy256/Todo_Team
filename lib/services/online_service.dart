@@ -16,6 +16,15 @@ import 'package:http/http.dart' as http;
 import '../models/current_user.dart';
 
 
+class Result<T> {
+  final bool isSuccess;
+  final T? data;
+  final String? errorMessage;
+
+  const Result.success(this.data) : isSuccess = true, errorMessage = null;
+  const Result.error(this.errorMessage) : isSuccess = false, data = null;
+}
+
 class ApiService {
   static final String baseUrl = dotenv.env['base_url']!;
   static final SecureStorage _secureStorage = SecureStorage.instance;
@@ -37,7 +46,7 @@ class ApiService {
     return headers;
   }
 
-  static Future<CurrentUser> register({
+  static Future<Result<CurrentUser>> register({
     required String email,
     required String password,
     required String username,
@@ -67,13 +76,13 @@ class ApiService {
       setAuthToken(token);
 
       final currentUser = CurrentUser.fromAuthResponse(data, email, username);
-      return currentUser;
+      return Result.success(currentUser);
     } else {
-      throw Exception('Registration failed: ${response.body}');
+      return Result.error('Registration failed: ${response.body}');
     }
   }
 
-  static Future<CurrentUser> login({
+  static Future<Result<CurrentUser>> login({
     required String email,
     required String password,
   }) async {
@@ -103,99 +112,109 @@ class ApiService {
         await _secureStorage.writeToken(token);
         setAuthToken(token);
 
-        try {
-          final userDetails = await _fetchUserDetails(userId);
-
+        final userDetailsResult = await _fetchUserDetails(userId);
+        if (userDetailsResult.isSuccess) {
+          final userDetails = userDetailsResult.data!;
           final currentUser = CurrentUser(
             id: userId,
             token: token,
             email: userDetails['email'] ?? email,
             username: userDetails['username'] ?? '',
           );
-
-          return currentUser;
-        } catch (e) {
+          return Result.success(currentUser);
+        } else {
           // If fetching user details fails, create user with basic info
-          debugPrint('Failed to fetch user details: $e');
+          debugPrint('Failed to fetch user details: ${userDetailsResult.errorMessage}');
           final currentUser = CurrentUser(
             id: userId,
             token: token,
             email: email,
             username: '', // Will be empty if we can't fetch it
           );
-
-          return currentUser;
+          return Result.success(currentUser);
         }
       } else if (response.statusCode == 401 || response.statusCode == 403) {
         // Authentication failed - wrong credentials
-        throw Exception('Email ou mot de passe incorrect');
+        return Result.error('Email ou mot de passe incorrect');
       } else {
         // Server error or other HTTP error
-        throw Exception('Erreur du serveur: ${response.statusCode}');
+        return Result.error('Erreur du serveur: ${response.statusCode}');
       }
     } on TimeoutException {
       // Network timeout
-      throw Exception('Délai d\'attente dépassé. Vérifiez votre connexion internet.');
+      return Result.error('Délai d\'attente dépassé. Vérifiez votre connexion internet.');
     } on SocketException {
       // No internet connection or server unreachable
-      throw Exception('Serveur inaccessible. Vérifiez votre connexion internet.');
+      return Result.error('Serveur inaccessible. Vérifiez votre connexion internet.');
     } on HttpException {
       // HTTP-related issues
-      throw Exception('Problème de réseau. Veuillez réessayer.');
+      return Result.error('Problème de réseau. Veuillez réessayer.');
     } catch (e) {
-      throw Exception('Erreur de connexion. Veuillez réessayer.');
+      return Result.error('Erreur de connexion. Veuillez réessayer.');
     }
   }
 
-  static Future<Map<String, dynamic>> _fetchUserDetails(int userId) async {
+  static Future<Result<Map<String, dynamic>>> _fetchUserDetails(int userId) async {
     final url = '$baseUrl${ApiModel.users}';
     debugPrint('GET $url');
 
-    final response = await http
-        .get(
-          Uri.parse(url),
-          headers: _headers,
-        )
-        .timeout(Duration(seconds: 5));
+    try {
+      final response = await http
+          .get(
+            Uri.parse(url),
+            headers: _headers,
+          )
+          .timeout(Duration(seconds: 5));
 
-    debugPrint('Response: ${response.statusCode} ${response.body}');
+      debugPrint('Response: ${response.statusCode} ${response.body}');
 
-    if (response.statusCode == 200) {
-      final List<dynamic> users = jsonDecode(response.body);
-      // Find the current user in the users list
-      final user = users.firstWhere(
-        (user) => user['id'] == userId,
-        orElse: () => throw Exception('User not found'),
-      );
-      return user;
-    } else {
-      throw Exception('Failed to fetch user details: ${response.body}');
+      if (response.statusCode == 200) {
+        final List<dynamic> users = jsonDecode(response.body);
+        // Find the current user in the users list
+        final user = users.firstWhere(
+          (user) => user['id'] == userId,
+          orElse: () => null,
+        );
+        if (user != null) {
+          return Result.success(user);
+        } else {
+          return Result.error('User not found');
+        }
+      } else {
+        return Result.error('Failed to fetch user details: ${response.body}');
+      }
+    } catch (e) {
+      return Result.error('Error fetching user details: $e');
     }
   }
 
-  static Future<List<User>> fetchUsers() async {
+  static Future<Result<List<User>>> fetchUsers() async {
     final url = '$baseUrl${ApiModel.users}';
     debugPrint('GET $url');
 
-    final response = await http
-        .get(
-          Uri.parse(url),
-          headers: _headers,
-        )
-        .timeout(Duration(seconds: 5));
+    try {
+      final response = await http
+          .get(
+            Uri.parse(url),
+            headers: _headers,
+          )
+          .timeout(Duration(seconds: 5));
 
-    debugPrint('Response: ${response.statusCode} ${response.body}');
+      debugPrint('Response: ${response.statusCode} ${response.body}');
 
-    if (response.statusCode == 200) {
-      final List<dynamic> usersJson = jsonDecode(response.body);
-      final List<User> apiUsers = usersJson.map((userJson) => User.fromJson(userJson)).toList();
+      if (response.statusCode == 200) {
+        final List<dynamic> usersJson = jsonDecode(response.body);
+        final List<User> apiUsers = usersJson.map((userJson) => User.fromJson(userJson)).toList();
 
-      // Sync the fetched users with local database
-      await LocalDatabaseService.instance.syncUsersFromApi(apiUsers);
+        // Sync the fetched users with local database
+        await LocalDatabaseService.instance.syncUsersFromApi(apiUsers);
 
-      return apiUsers;
-    } else {
-      throw Exception('Failed to fetch users: ${response.body}');
+        return Result.success(apiUsers);
+      } else {
+        return Result.error('Failed to fetch users: ${response.body}');
+      }
+    } catch (e) {
+      return Result.error('Error fetching users: $e');
     }
   }
 
@@ -205,11 +224,11 @@ class ApiService {
 
     // If force refresh is requested or no users exist locally, fetch from API
     if (forceRefresh || !(await localDb.hasUsers())) {
-      try {
-        // Try to fetch from API and sync to local database
-        return await fetchUsers();
-      } catch (e) {
-        debugPrint('Failed to fetch users from API: $e');
+      final result = await fetchUsers();
+      if (result.isSuccess) {
+        return result.data!;
+      } else {
+        debugPrint('Failed to fetch users from API: ${result.errorMessage}');
         // If API fails, return local users (might be empty)
         return await localDb.getUsers();
       }
@@ -219,29 +238,33 @@ class ApiService {
     return await localDb.getUsers();
   }
 
-  static Future<List<Task>> fetchTasks() async {
+  static Future<Result<List<Task>>> fetchTasks() async {
     final url = '$baseUrl${ApiModel.tasks}';
     debugPrint('GET $url');
 
-    final response = await http
-        .get(
-          Uri.parse(url),
-          headers: _headers,
-        )
-        .timeout(Duration(seconds: 5));
+    try {
+      final response = await http
+          .get(
+            Uri.parse(url),
+            headers: _headers,
+          )
+          .timeout(Duration(seconds: 5));
 
-    debugPrint('Response: ${response.statusCode} ${response.body}');
+      debugPrint('Response: ${response.statusCode} ${response.body}');
 
-    if (response.statusCode == 200) {
-      final List<dynamic> tasksJson = jsonDecode(response.body);
-      final List<Task> apiTasks = tasksJson.map((taskJson) => Task.fromApiJson(taskJson)).toList();
+      if (response.statusCode == 200) {
+        final List<dynamic> tasksJson = jsonDecode(response.body);
+        final List<Task> apiTasks = tasksJson.map((taskJson) => Task.fromApiJson(taskJson)).toList();
 
-      // Sync the fetched tasks with local database
-      await LocalDatabaseService.instance.syncTasksFromApi(apiTasks);
+        // Sync the fetched tasks with local database
+        await LocalDatabaseService.instance.syncTasksFromApi(apiTasks);
 
-      return apiTasks;
-    } else {
-      throw Exception('Failed to fetch tasks: ${response.body}');
+        return Result.success(apiTasks);
+      } else {
+        return Result.error('Failed to fetch tasks: ${response.body}');
+      }
+    } catch (e) {
+      return Result.error('Error fetching tasks: $e');
     }
   }
 
@@ -251,11 +274,11 @@ class ApiService {
 
     // If force refresh is requested or no tasks exist locally, fetch from API
     if (forceRefresh || !(await localDb.hasTasks())) {
-      try {
-        // Try to fetch from API and sync to local database
-        return await fetchTasks();
-      } catch (e) {
-        debugPrint('Failed to fetch tasks from API: $e');
+      final result = await fetchTasks();
+      if (result.isSuccess) {
+        return result.data!;
+      } else {
+        debugPrint('Failed to fetch tasks from API: ${result.errorMessage}');
         // If API fails, return local tasks (might be empty)
         return await localDb.getTasks();
       }
@@ -267,15 +290,14 @@ class ApiService {
 
   // Refresh users call (for when editing/adding tasks)
   static Future<void> refreshUsers() async {
-    try {
-      await fetchUsers();
-    } catch (e) {
-      debugPrint('Failed to refresh users: $e');
+    final result = await fetchUsers();
+    if (!result.isSuccess) {
+      debugPrint('Failed to refresh users: ${result.errorMessage}');
       // If it fails, continue with local database
     }
   }
 
-  static Future<Task> createTask(Task task) async {
+  static Future<Result<Task>> createTask(Task task) async {
     final url = '$baseUrl${ApiModel.tasks}';
     debugPrint('POST $url');
 
@@ -314,22 +336,94 @@ class ApiService {
         // Save to local database
         await LocalDatabaseService.instance.addTask(createdTask);
 
-        return createdTask;
+        return Result.success(createdTask);
       } else if (response.statusCode == 401 || response.statusCode == 403) {
-        throw Exception('Session expirée. Veuillez vous reconnecter.');
+        return Result.error('Session expirée. Veuillez vous reconnecter.');
       } else {
-        throw Exception('Erreur lors de la création de la tâche: ${response.statusCode}');
+        return Result.error('Erreur lors de la création de la tâche: ${response.statusCode}');
       }
     } on TimeoutException {
-      throw Exception('Délai d\'attente dépassé lors de la création de la tâche.');
+      return Result.error('Délai d\'attente dépassé lors de la création de la tâche.');
     } on SocketException {
-      throw Exception('Impossible de créer la tâche. Vérifiez votre connexion internet.');
+      return Result.error('Impossible de créer la tâche. Vérifiez votre connexion internet.');
     } on HttpException {
-      throw Exception('Erreur réseau lors de la création de la tâche.');
+      return Result.error('Erreur réseau lors de la création de la tâche.');
     } catch (e) {
-      throw Exception('Erreur lors de la création de la tâche: $e');
+      return Result.error('Erreur lors de la création de la tâche: $e');
     }
   }
+
+  static Future<Result<Task>> updateTask(Task task) async {
+    final url = '$baseUrl${ApiModel.tasks}/${task.getId}';
+    debugPrint('PUT $url');
+
+    try {
+      final requestBody = task.toJson();
+
+      final response = await http
+          .put(  // Changed from POST to PUT
+        Uri.parse(url),
+        headers: _headers,
+        body: jsonEncode(requestBody),
+      )
+          .timeout(Duration(seconds: ApiModel.timeoutInSec));
+
+      debugPrint('Request body: ${jsonEncode(requestBody)}');
+      debugPrint('Response: ${response.statusCode} ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Save to local database
+        await LocalDatabaseService.instance.updateTask(task);
+
+        return Result.success(task);
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        return Result.error('Session expirée. Veuillez vous reconnecter.');
+      } else {
+        return Result.error('Erreur lors de la modificaion de la tâche: ${response.statusCode}');
+      }
+    } on TimeoutException {
+      return Result.error('Délai d\'attente dépassé lors de la modificaion de la tâche.');
+    } on SocketException {
+      return Result.error('Impossible de créer la tâche. Vérifiez votre connexion internet.');
+    } on HttpException {
+      return Result.error('Erreur réseau lors de la modificaion de la tâche.');
+    } catch (e) {
+      return Result.error('Erreur lors de la modificaion de la tâche: $e');
+    }
+  }
+  static Future<Result<void>> deleteTask(int taskId) async {
+    final url = '$baseUrl${ApiModel.tasks}/$taskId';
+    debugPrint('DELETE $url');
+
+    try {
+      final response = await http
+          .delete(
+            Uri.parse(url),
+            headers: _headers,
+          )
+          .timeout(Duration(seconds: ApiModel.timeoutInSec));
+
+      debugPrint('Response: ${response.statusCode} ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        await LocalDatabaseService.instance.deleteTask(taskId);
+        return Result.success(null);
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        return Result.error('Session expirée. Veuillez vous reconnecter.');
+      } else {
+        return Result.error('Erreur lors de la suppression de la tâche: ${response.statusCode}');
+      }
+    } on TimeoutException {
+      return Result.error('Délai d\'attente dépassé lors de la suppression de la tâche.');
+    } on SocketException {
+      return Result.error('Impossible de supprimer la tâche. Vérifiez votre connexion internet.');
+    } on HttpException {
+      return Result.error('Erreur réseau lors de la suppression de la tâche.');
+    } catch (e) {
+      return Result.error('Erreur lors de la suppression de la tâche: $e');
+    }
+  }
+
 
   static Future<void> logout() async {
     await _secureStorage.deleteToken();

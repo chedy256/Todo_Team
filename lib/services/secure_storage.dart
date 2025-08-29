@@ -18,7 +18,6 @@ class SecureStorage {
       value: DateTime.now().add(Duration(hours: 12)).toIso8601String(),
     );
   }
-  // This function can be used to retrieve the token from secure storage
   Future <String?> readToken() async{
     final String? value = await storage.read(key: 'token');
     if (value != null) {

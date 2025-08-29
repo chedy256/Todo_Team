@@ -30,10 +30,10 @@ class CurrentUser extends User{
     );
   }
 
+  @override
   Map<String, dynamic> toJson() {
     return {
       'token': token,
     };
   }
 }
-

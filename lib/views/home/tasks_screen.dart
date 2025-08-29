@@ -20,10 +20,24 @@ class _TasksScreenState extends State<TasksScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Set context for providers to show SnackBar messages
+      context.read<TaskProvider>().setContext(context);
+      context.read<UserProvider>().setContext(context);
+
       // Load both users and tasks when the screen initializes
       context.read<UserProvider>().loadUsers();
       context.read<TaskProvider>().loadTasks();
+
+      // Start periodic refresh every 5 minutes
+      context.read<TaskProvider>().startPeriodicRefresh();
     });
+  }
+
+  @override
+  void dispose() {
+    // Stop periodic refresh when screen is disposed
+    context.read<TaskProvider>().stopPeriodicRefresh();
+    super.dispose();
   }
 
   @override
@@ -61,9 +75,7 @@ class _TasksScreenState extends State<TasksScreen> {
             const SizedBox(height: 5),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildFilterButtons(),
-              ]
+              children: [_buildFilterButtons()],
             ),
             const SizedBox(height: 5),
             Expanded(
@@ -92,42 +104,42 @@ class _TasksScreenState extends State<TasksScreen> {
       builder: (context, taskProvider, child) {
         final currentStatus = taskProvider.filterSettings.status;
 
-        return  Row(
-              children: [
-                Container(
-                  height: 36,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.rectangle,
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.all(Radius.circular(18)),
-                  ),
-                  child: Row(
-                    children: TaskStatus.values.map((status) {
-                      final isSelected = currentStatus == status;
-                      return TextButton(
-                        onPressed: () => _onFilterSelected(status),
-                        style: TextButton.styleFrom(
-                          backgroundColor: isSelected
-                              ? Colors.deepPurple.shade100
-                              : Colors.transparent,
-                          foregroundColor: Colors.black,
-                        ),
-                        child: Text(
-                          status.displayName,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.black,
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-
-          ]);
+        return Row(
+          children: [
+            Container(
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.rectangle,
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.all(Radius.circular(18)),
+              ),
+              child: Row(
+                children: TaskStatus.values.map((status) {
+                  final isSelected = currentStatus == status;
+                  return TextButton(
+                    onPressed: () => _onFilterSelected(status),
+                    style: TextButton.styleFrom(
+                      backgroundColor: isSelected
+                          ? Colors.deepPurple.shade100
+                          : Colors.transparent,
+                      foregroundColor: Colors.black,
+                    ),
+                    child: Text(
+                      status.displayName,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.black,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        );
       },
     );
   }
@@ -171,26 +183,35 @@ class _TasksScreenState extends State<TasksScreen> {
   }
 
   Widget _buildErrorState(String error) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, color: Colors.red, size: 48),
-          const SizedBox(height: 16),
-          Text(
-            error,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.red, fontSize: 16),
+    return RefreshIndicator(
+      onRefresh: () async {
+        context.read<TaskProvider>().clearError();
+        await context.read<TaskProvider>().refreshTasks();
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, color: Colors.red, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                error,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.red, fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  context.read<TaskProvider>().clearError();
+                  context.read<TaskProvider>().refreshTasks();
+                },
+                child: const Text('Réessayer'),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              context.read<TaskProvider>().clearError();
-              context.read<TaskProvider>().refreshTasks();
-            },
-            child: const Text('Réessayer'),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -217,18 +238,24 @@ class _TasksScreenState extends State<TasksScreen> {
         icon = Icons.check_circle_outline;
         break;
     }
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: Colors.grey, size: 64),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+    return RefreshIndicator(
+      onRefresh: () async => context.read<TaskProvider>().refreshTasks(),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.grey, size: 64),
+              const SizedBox(height: 16),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -236,6 +263,7 @@ class _TasksScreenState extends State<TasksScreen> {
   void _onFilterSelected(TaskStatus status) {
     context.read<TaskProvider>().filterTasks(status);
   }
+
   void _refreshTasksList() {
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
     taskProvider.refreshTasks();

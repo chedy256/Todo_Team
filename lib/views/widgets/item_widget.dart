@@ -1,11 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:project/models/task_model.dart';
 import 'package:project/utils/utils.dart';
 import 'package:project/views/widgets/task_actions.dart';
-import 'package:project/controllers/task_provider.dart';
 
 import '../../controllers/auth_controller.dart';
 
@@ -105,13 +103,15 @@ class _ItemWidgetState extends State<ItemWidget> {
           task: widget.task,
           onTaskChanged: () {
             if (mounted) {
-              context.read<TaskProvider>().refreshTasks();
+              // Only call the parent callback, which should handle the refresh
+              // Remove the direct TaskProvider refresh to avoid duplicate requests
               widget.onTaskChanged?.call();
             }
           },
           onTaskDeleted: () {
             if (mounted) {
-              context.read<TaskProvider>().refreshTasks();
+              // Only call the parent callback, which should handle the refresh
+              // Remove the direct TaskProvider refresh to avoid duplicate requests
               widget.onTaskChanged?.call();
             }
           },

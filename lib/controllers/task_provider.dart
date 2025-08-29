@@ -1,7 +1,9 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:project/models/task_model.dart';
 import 'package:project/services/local_database_service.dart';
 import 'package:project/services/online_service.dart';
+import 'package:project/utils/utils.dart';
 
 import '../models/task_filter.dart';
 
@@ -9,6 +11,7 @@ class TaskProvider extends ChangeNotifier {
   List<Task> _tasks = [];
   bool _isLoading = false;
   String? _error;
+  BuildContext? _context;
 
   List<Task> get tasks => _tasks;
 
@@ -21,6 +24,20 @@ class TaskProvider extends ChangeNotifier {
   TaskFilterSettings get filterSettings => _filterSettings;
 
   final LocalDatabaseService _databaseService = LocalDatabaseService.instance;
+
+  Timer? _refreshTimer;
+
+  /// Set the context for showing SnackBar messages
+  void setContext(BuildContext context) {
+    _context = context;
+  }
+
+  /// Show error in SnackBar if it's not authentication-related
+  void _showErrorIfNotAuth(String errorMessage) {
+    if (_context != null) {
+      Utils.showErrorSnackBar(_context!, errorMessage);
+    }
+  }
 
   Future<void> loadTasks({bool forceRefresh = false}) async {
     _isLoading = true;
@@ -45,7 +62,9 @@ class TaskProvider extends ChangeNotifier {
         }
       }
     } catch (e) {
-      _error = 'Error loading tasks: $e';
+      final errorMessage = 'Error loading tasks: $e';
+      _error = errorMessage;
+      _showErrorIfNotAuth(errorMessage);
       debugPrint('Error loading tasks: $e');
       // Fallback to local database even if API fails
       try {
@@ -75,14 +94,6 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateTask(Task updatedTask) {
-    final index = _tasks.indexWhere((task) => task.id == updatedTask.id);
-    if (index != -1) {
-      _tasks[index] = updatedTask;
-      notifyListeners();
-    }
-  }
-
   void removeTask(int taskId) {
     _tasks.removeWhere((task) => task.id == taskId);
     notifyListeners();
@@ -97,12 +108,11 @@ class TaskProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
 
-    try {
-      // Create task via API and get the actual task with server-assigned ID
-      final createdTask = await ApiService.createTask(task);
+    final result = await ApiService.createTask(task);
 
+    if (result.isSuccess) {
       // Add the task to local list
-      _tasks.add(createdTask);
+      _tasks.add(result.data!);
 
       // Sort tasks based on current filter settings
       if (_filterSettings.sortType == SortType.dueDate) {
@@ -113,9 +123,12 @@ class TaskProvider extends ChangeNotifier {
         _tasks.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       }
 
-      debugPrint('Task created successfully with ID: ${createdTask.id}');
-    } catch (e) {
-      debugPrint('Error creating task: $e');
+      debugPrint('Task created successfully with ID: ${result.data!.id}');
+    } else {
+      debugPrint('Error creating task: ${result.errorMessage}');
+      final errorMessage = result.errorMessage ?? 'Failed to create task';
+      _error = errorMessage;
+      _showErrorIfNotAuth(errorMessage);
 
       // If API fails, try to save locally for later sync
       try {
@@ -133,16 +146,58 @@ class TaskProvider extends ChangeNotifier {
           updatedAt: task.updatedAt,
         );
         _tasks.add(taskWithLocalId);
-
-        debugPrint('Task saved locally with ID: $localId for later sync');
       } catch (localError) {
         debugPrint('Failed to save task locally: $localError');
-        rethrow;
+        final localErrorMessage = 'Failed to create task: $errorMessage';
+        _error = localErrorMessage;
+        _showErrorIfNotAuth(localErrorMessage);
       }
-    } finally {
-      _isLoading = false;
-      notifyListeners();
     }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> updateTask(Task task) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    final result = await ApiService.updateTask(task);
+
+    if (result.isSuccess) {
+      // Update the task in local list
+      final index = _tasks.indexWhere((t) => t.id == task.id);
+      if (index != -1) {
+        _tasks[index] = task;
+      }
+
+      debugPrint('Task updated successfully with ID: ${task.id}');
+    } else {
+      debugPrint('Error updating task: ${result.errorMessage}');
+      final errorMessage = result.errorMessage ?? 'Failed to update task';
+      _error = errorMessage;
+      _showErrorIfNotAuth(errorMessage);
+
+      // If API fails, try to update locally for later sync
+      try {
+        await _databaseService.updateTask(task);
+        final index = _tasks.indexWhere((t) => t.id == task.id);
+        if (index != -1) {
+          _tasks[index] = task;
+        }
+
+        debugPrint('Task updated locally for later sync');
+      } catch (localError) {
+        debugPrint('Failed to update task locally: $localError');
+        final localErrorMessage = 'Failed to update task: $errorMessage';
+        _error = localErrorMessage;
+        _showErrorIfNotAuth(localErrorMessage);
+      }
+    }
+
+    _isLoading = false;
+    notifyListeners();
   }
 
   Task? getTaskById(int? id) {
@@ -167,7 +222,9 @@ class TaskProvider extends ChangeNotifier {
       }
       return counts;
     } catch (e) {
-      _error = 'get tasks count by status error: $e';
+      final errorMessage = 'get tasks count by status error: $e';
+      _error = errorMessage;
+      _showErrorIfNotAuth(errorMessage);
       return {};
     }
   }
@@ -175,5 +232,23 @@ class TaskProvider extends ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  void startPeriodicRefresh() {
+    _refreshTimer?.cancel(); // Cancel any existing timer
+    _refreshTimer = Timer.periodic(Duration(minutes: 5), (timer) {
+      refreshTasks();
+    });
+  }
+
+  void stopPeriodicRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+  }
+
+  @override
+  void dispose() {
+    stopPeriodicRefresh();
+    super.dispose();
   }
 }
