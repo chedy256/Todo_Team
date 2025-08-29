@@ -12,12 +12,13 @@ A Flutter-based collaborative "Offline-First" task management app for teams, sup
 
 ## Features
 ### **Done:**
+- **Secure Authentication** — JWT-based login & signup
 - **Local Storage** — Sqflite for tasks/users, Flutter Secure Storage for credentials
 - **Role-based Actions** — Only owners can edit tasks
 - **Priority & Time Tracking** — Color-coded priority and dynamic "time left" indicator
 - **Local Notifications** — Alerts for tasks due in <24h
+
 ### **On the Way:**
-- **Secure Authentication** — JWT-based login & signup
 - **Offline Support** — Local caching of tasks with sync when online
 - **Push Notifications** — Firebase Cloud Messaging for task updates
 
