@@ -9,6 +9,7 @@ import 'package:project/models/task_model.dart';
 import 'package:project/models/user_model.dart';
 import 'package:project/services/local_database_service.dart';
 import 'package:project/services/secure_storage.dart';
+import 'package:project/services/rate_limiter_service.dart';
 
 import '../main.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -189,6 +190,14 @@ class ApiService {
   }
 
   static Future<Result<List<User>>> fetchUsers() async {
+    final rateLimiter = RateLimiterService();
+    const endpoint = 'users';
+
+    // Check if we can make the call based on rate limiting
+    if (!rateLimiter.canMakeCall(endpoint)) {
+      return Result.error('Rate limited - using local data');
+    }
+
     final url = '$baseUrl${ApiModel.users}';
     debugPrint('GET $url');
 
@@ -203,6 +212,9 @@ class ApiService {
       debugPrint('Response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 200) {
+        // Record successful API call
+        rateLimiter.recordCall(endpoint);
+
         final List<dynamic> usersJson = jsonDecode(response.body);
         final List<User> apiUsers = usersJson.map((userJson) => User.fromJson(userJson)).toList();
 
@@ -229,7 +241,7 @@ class ApiService {
         return result.data!;
       } else {
         debugPrint('Failed to fetch users from API: ${result.errorMessage}');
-        // If API fails, return local users (might be empty)
+        // For rate limiting or any other API failure, silently fall back to local data
         return await localDb.getUsers();
       }
     }
@@ -239,6 +251,14 @@ class ApiService {
   }
 
   static Future<Result<List<Task>>> fetchTasks() async {
+    final rateLimiter = RateLimiterService();
+    const endpoint = 'tasks';
+
+    // Check if we can make the call based on rate limiting
+    if (!rateLimiter.canMakeCall(endpoint)) {
+      return Result.error('Rate limited - using local data');
+    }
+
     final url = '$baseUrl${ApiModel.tasks}';
     debugPrint('GET $url');
 
@@ -253,6 +273,9 @@ class ApiService {
       debugPrint('Response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 200) {
+        // Record successful API call
+        rateLimiter.recordCall(endpoint);
+
         final List<dynamic> tasksJson = jsonDecode(response.body);
         final List<Task> apiTasks = tasksJson.map((taskJson) => Task.fromApiJson(taskJson)).toList();
 
@@ -279,7 +302,7 @@ class ApiService {
         return result.data!;
       } else {
         debugPrint('Failed to fetch tasks from API: ${result.errorMessage}');
-        // If API fails, return local tasks (might be empty)
+        // For rate limiting or any other API failure, silently fall back to local data
         return await localDb.getTasks();
       }
     }

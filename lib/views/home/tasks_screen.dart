@@ -240,8 +240,6 @@ class _TasksScreenState extends State<TasksScreen> {
     }
     return RefreshIndicator(
       onRefresh: () async => context.read<TaskProvider>().refreshTasks(),
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -255,8 +253,7 @@ class _TasksScreenState extends State<TasksScreen> {
               ),
             ],
           ),
-        ),
-      ),
+        )
     );
   }
 
