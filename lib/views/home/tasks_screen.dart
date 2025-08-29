@@ -6,6 +6,7 @@ import 'package:project/controllers/user_provider.dart';
 import 'package:project/models/task_filter.dart';
 
 import '../widgets/item_widget.dart';
+import '../widgets/connectivity_status_widget.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
@@ -60,13 +61,7 @@ class _TasksScreenState extends State<TasksScreen> {
           ),
         ),
         actions: [
-          const Text(
-            'En ligne',
-            style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(width: 6),
-          const Icon(Icons.wifi, color: Colors.green, size: 20),
-          const SizedBox(width: 18),
+          const ConnectivityStatusWidget(),
         ],
       ),
       body: SafeArea(
