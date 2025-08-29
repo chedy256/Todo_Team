@@ -1,5 +1,6 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'dart:convert';
 
 import '../models/task_filter.dart';
 import '../models/task_model.dart';
@@ -21,6 +22,7 @@ class LocalDatabaseService {
   final String _tasksCreatedAtColumn = 'createdAt';
   final String _tasksUpdatedAtColumn = 'updatedAt';
   final String _tasksIsCompletedColumn = 'isCompleted';
+  final String _tasksIsPendingColumn = 'isPending'; // New column for pending status
 
   final String _usersTableName = 'users';
   final String _usersIdColumn = 'id';
@@ -49,7 +51,7 @@ class LocalDatabaseService {
     final databasePath = join(dbDirPath, 'master_db.db');
     final database = await openDatabase(
       databasePath,
-      version: 2,
+      version: 1, // Keep version 1 to avoid migrations
       onCreate: (db, version) async {
         // Create users table first
         await db.execute('''
@@ -70,6 +72,7 @@ class LocalDatabaseService {
             $_tasksOwnerIdColumn INTEGER NOT NULL,
             $_tasksAssignedToColumn INTEGER DEFAULT NULL,
             $_tasksIsCompletedColumn INTEGER DEFAULT 0 NOT NULL,
+            $_tasksIsPendingColumn INTEGER DEFAULT 0 NOT NULL,
             $_tasksDueDateColumn INTEGER NOT NULL,
             $_tasksCreatedAtColumn INTEGER DEFAULT (strftime('%s','now')),
             $_tasksUpdatedAtColumn INTEGER NOT NULL,
@@ -113,6 +116,7 @@ class LocalDatabaseService {
       _tasksOwnerIdColumn: task.ownerId,
       _tasksAssignedToColumn: task.assignedId?.id,
       _tasksIsCompletedColumn: task.isCompleted ? 1 : 0,
+      _tasksIsPendingColumn: task.isPending ? 1 : 0, // Include isPending column
       _tasksDueDateColumn: task.dueDate.millisecondsSinceEpoch,
       _tasksCreatedAtColumn: task.createdAt.millisecondsSinceEpoch,
       _tasksUpdatedAtColumn: task.updatedAt.millisecondsSinceEpoch,
@@ -131,6 +135,7 @@ class LocalDatabaseService {
         _tasksOwnerIdColumn: task.ownerId,
         _tasksAssignedToColumn: task.assignedId?.id,
         _tasksIsCompletedColumn: task.isCompleted ? 1 : 0,
+        _tasksIsPendingColumn: task.isPending ? 1 : 0, // Include isPending column
         _tasksDueDateColumn: task.dueDate.millisecondsSinceEpoch,
         _tasksUpdatedAtColumn: DateTime.now().millisecondsSinceEpoch,
       },
@@ -230,6 +235,7 @@ class LocalDatabaseService {
         ownerId: maps[i]['ownerId'],
         assignedId: assignedUser,
         isCompleted: (maps[i]['isCompleted'] ?? 0) == 1,
+        isPending: (maps[i]['isPending'] ?? 0) == 1, // Include isPending field
         updatedAt: DateTime.fromMillisecondsSinceEpoch(maps[i]['updatedAt']),
         createdAt: DateTime.fromMillisecondsSinceEpoch(maps[i]['createdAt']),
       );
@@ -346,6 +352,7 @@ class LocalDatabaseService {
           _tasksOwnerIdColumn: task.ownerId,
           _tasksAssignedToColumn: task.assignedId?.id,
           _tasksIsCompletedColumn: task.isCompleted ? 1 : 0,
+          _tasksIsPendingColumn: task.isPending ? 1 : 0,
           _tasksDueDateColumn: task.dueDate.millisecondsSinceEpoch,
           _tasksCreatedAtColumn: task.createdAt.millisecondsSinceEpoch,
           _tasksUpdatedAtColumn: task.updatedAt.millisecondsSinceEpoch,
@@ -367,5 +374,87 @@ class LocalDatabaseService {
     final result = await db.rawQuery('SELECT COUNT(*) as count FROM $_usersTableName');
     final count = result.first['count'] as int;
     return count > 0;
+  }
+
+  // Pending changes management methods
+  Future<void> addPendingChange({
+    required int taskId,
+    required String changeType,
+    required Map<String, dynamic> beforeChange,
+    required Map<String, dynamic> afterChange,
+  }) async {
+    final db = await database;
+    await db.insert(_pendingChangesTableName, {
+      _pendingChangesTaskIdColumn: taskId,
+      _pendingChangesChangeTypeColumn: changeType,
+      _pendingChangesBeforeChangeColumn: jsonEncode(beforeChange),
+      _pendingChangesAfterChangeColumn: jsonEncode(afterChange),
+      _pendingChangesTimestampColumn: DateTime.now().millisecondsSinceEpoch,
+      _pendingChangesSyncedColumn: 0,
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getPendingChanges() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      _pendingChangesTableName,
+      where: '$_pendingChangesSyncedColumn = ?',
+      whereArgs: [0],
+      orderBy: '$_pendingChangesTimestampColumn ASC',
+    );
+    return maps;
+  }
+
+  Future<void> markPendingChangeSynced(int pendingChangeId) async {
+    final db = await database;
+    await db.update(
+      _pendingChangesTableName,
+      {_pendingChangesSyncedColumn: 1},
+      where: '$_pendingChangesIdColumn = ?',
+      whereArgs: [pendingChangeId],
+    );
+  }
+
+  Future<void> removePendingChange(int pendingChangeId) async {
+    final db = await database;
+    await db.delete(
+      _pendingChangesTableName,
+      where: '$_pendingChangesIdColumn = ?',
+      whereArgs: [pendingChangeId],
+    );
+  }
+
+  Future<List<Task>> getPendingTasks() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      _tasksTableName,
+      where: '$_tasksIsPendingColumn = ?',
+      whereArgs: [1],
+      orderBy: '$_tasksCreatedAtColumn ASC',
+    );
+    return _mapToTaskList(maps);
+  }
+
+  Future<void> markTaskAsSynced(int taskId, int newTaskId) async {
+    final db = await database;
+    await db.update(
+      _tasksTableName,
+      {
+        _tasksIdColumn: newTaskId,
+        _tasksIsPendingColumn: 0,
+      },
+      where: '$_tasksIdColumn = ?',
+      whereArgs: [taskId],
+    );
+  }
+
+  Future<void> markTaskAsPending(int taskId) async {
+    final db = await database;
+    await db.update(
+      _tasksTableName,
+      {_tasksIsPendingColumn: 1},
+      where: '$_tasksIdColumn = ?',
+      whereArgs: [taskId],
+    );
   }
 }

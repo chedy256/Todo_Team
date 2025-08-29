@@ -17,9 +17,8 @@ A Flutter-based collaborative "Offline-First" task management app for teams, sup
 - **Role-based Actions** — Only owners can edit tasks
 - **Priority & Time Tracking** — Color-coded priority and dynamic "time left" indicator
 - **Local Notifications** — Alerts for tasks due in <24h
-
-### **On the Way:**
 - **Offline Support** — Local caching of tasks with sync when online
+### **On the Way:**
 - **Push Notifications** — Firebase Cloud Messaging for task updates
 
 

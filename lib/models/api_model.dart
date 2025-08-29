@@ -4,5 +4,5 @@ class ApiModel{
   static const String authAuthenticate = '/auth/login';
   static const String tasks = '/tasks';
   static const String users = '/users';
-  static const int timeoutInSec = 60;
+  static const int timeoutInSec = 20;
 }

@@ -9,6 +9,7 @@ class Task {
   String description;
   Priority priority;
   bool isCompleted = false;
+  bool isPending = false; // New field for pending changes
   User? assignedId;
   DateTime dueDate, updatedAt;
   late final DateTime createdAt;
@@ -21,6 +22,7 @@ class Task {
     required this.ownerId,
     this.assignedId,
     required this.isCompleted,
+    this.isPending = false, // Default to false
     required this.updatedAt,
     required this.createdAt,
   });
@@ -33,6 +35,7 @@ class Task {
       description: json['description'],
       priority: _priorityFromString(json['priority']),
       isCompleted: json['completed'] ?? false,
+      isPending: false, // API tasks are never pending
       dueDate: DateTime.fromMillisecondsSinceEpoch(json['dueDate'] * 1000), // API returns seconds, convert to milliseconds
       ownerId: json['ownerId'],
       assignedId: json['assignedId'] != null

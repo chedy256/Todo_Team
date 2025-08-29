@@ -10,12 +10,13 @@ import 'package:project/models/user_model.dart';
 import 'package:project/services/local_database_service.dart';
 import 'package:project/services/secure_storage.dart';
 import 'package:project/services/rate_limiter_service.dart';
+import 'package:project/services/connectivity_service.dart';
+import 'package:project/services/notif_service.dart';
 
 import '../main.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/current_user.dart';
-
 
 class Result<T> {
   final bool isSuccess;
@@ -95,10 +96,7 @@ class ApiService {
           .post(
             Uri.parse(url),
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'email': email,
-              'password': password,
-            }),
+            body: jsonEncode({'email': email, 'password': password}),
           )
           .timeout(Duration(seconds: 5));
 
@@ -125,7 +123,9 @@ class ApiService {
           return Result.success(currentUser);
         } else {
           // If fetching user details fails, create user with basic info
-          debugPrint('Failed to fetch user details: ${userDetailsResult.errorMessage}');
+          debugPrint(
+            'Failed to fetch user details: ${userDetailsResult.errorMessage}',
+          );
           final currentUser = CurrentUser(
             id: userId,
             token: token,
@@ -143,10 +143,14 @@ class ApiService {
       }
     } on TimeoutException {
       // Network timeout
-      return Result.error('Délai d\'attente dépassé. Vérifiez votre connexion internet.');
+      return Result.error(
+        'Délai d\'attente dépassé. Vérifiez votre connexion internet.',
+      );
     } on SocketException {
       // No internet connection or server unreachable
-      return Result.error('Serveur inaccessible. Vérifiez votre connexion internet.');
+      return Result.error(
+        'Serveur inaccessible. Vérifiez votre connexion internet.',
+      );
     } on HttpException {
       // HTTP-related issues
       return Result.error('Problème de réseau. Veuillez réessayer.');
@@ -155,16 +159,15 @@ class ApiService {
     }
   }
 
-  static Future<Result<Map<String, dynamic>>> _fetchUserDetails(int userId) async {
+  static Future<Result<Map<String, dynamic>>> _fetchUserDetails(
+    int userId,
+  ) async {
     final url = '$baseUrl${ApiModel.users}';
     debugPrint('GET $url');
 
     try {
       final response = await http
-          .get(
-            Uri.parse(url),
-            headers: _headers,
-          )
+          .get(Uri.parse(url), headers: _headers)
           .timeout(Duration(seconds: 5));
 
       debugPrint('Response: ${response.statusCode} ${response.body}');
@@ -203,10 +206,7 @@ class ApiService {
 
     try {
       final response = await http
-          .get(
-            Uri.parse(url),
-            headers: _headers,
-          )
+          .get(Uri.parse(url), headers: _headers)
           .timeout(Duration(seconds: 5));
 
       debugPrint('Response: ${response.statusCode} ${response.body}');
@@ -216,7 +216,9 @@ class ApiService {
         rateLimiter.recordCall(endpoint);
 
         final List<dynamic> usersJson = jsonDecode(response.body);
-        final List<User> apiUsers = usersJson.map((userJson) => User.fromJson(userJson)).toList();
+        final List<User> apiUsers = usersJson
+            .map((userJson) => User.fromJson(userJson))
+            .toList();
 
         // Sync the fetched users with local database
         await LocalDatabaseService.instance.syncUsersFromApi(apiUsers);
@@ -264,10 +266,7 @@ class ApiService {
 
     try {
       final response = await http
-          .get(
-            Uri.parse(url),
-            headers: _headers,
-          )
+          .get(Uri.parse(url), headers: _headers)
           .timeout(Duration(seconds: 5));
 
       debugPrint('Response: ${response.statusCode} ${response.body}');
@@ -277,7 +276,9 @@ class ApiService {
         rateLimiter.recordCall(endpoint);
 
         final List<dynamic> tasksJson = jsonDecode(response.body);
-        final List<Task> apiTasks = tasksJson.map((taskJson) => Task.fromApiJson(taskJson)).toList();
+        final List<Task> apiTasks = tasksJson
+            .map((taskJson) => Task.fromApiJson(taskJson))
+            .toList();
 
         // Sync the fetched tasks with local database
         await LocalDatabaseService.instance.syncTasksFromApi(apiTasks);
@@ -321,6 +322,43 @@ class ApiService {
   }
 
   static Future<Result<Task>> createTask(Task task) async {
+    final localDb = LocalDatabaseService.instance;
+    final connectivity = ConnectivityService.instance;
+
+    // Check connectivity first
+    final isOnline = await connectivity.isOnline();
+
+    if (!isOnline) {
+      // Create task offline with local ID
+      final localTaskId = DateTime.now().millisecondsSinceEpoch;
+      final pendingTask = Task(
+        id: localTaskId,
+        title: task.title,
+        description: task.description,
+        priority: task.priority,
+        ownerId: task.ownerId,
+        assignedId: task.assignedId,
+        dueDate: task.dueDate,
+        isCompleted: false,
+        isPending: true, // Mark as pending
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      // Save to local database
+      await localDb.addTask(pendingTask);
+
+      // Add to pending changes
+      await localDb.addPendingChange(
+        taskId: localTaskId,
+        changeType: 'CREATE',
+        beforeChange: {},
+        afterChange: pendingTask.toJson(),
+      );
+
+      return Result.success(pendingTask);
+    }
+
     final url = '$baseUrl${ApiModel.tasks}';
     debugPrint('POST $url');
 
@@ -352,23 +390,74 @@ class ApiService {
           assignedId: task.assignedId,
           dueDate: task.dueDate,
           isCompleted: false,
+          isPending: false, // Not pending since it was created successfully
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         );
 
         // Save to local database
-        await LocalDatabaseService.instance.addTask(createdTask);
+        await localDb.addTask(createdTask);
 
         return Result.success(createdTask);
       } else if (response.statusCode == 401 || response.statusCode == 403) {
         return Result.error('Session expirée. Veuillez vous reconnecter.');
       } else {
-        return Result.error('Erreur lors de la création de la tâche: ${response.statusCode}');
+        return Result.error(
+          'Erreur lors de la création de la tâche: ${response.statusCode}',
+        );
       }
     } on TimeoutException {
-      return Result.error('Délai d\'attente dépassé lors de la création de la tâche.');
+      // Handle timeout by creating pending task
+      final localTaskId = DateTime.now().millisecondsSinceEpoch;
+      final pendingTask = Task(
+        id: localTaskId,
+        title: task.title,
+        description: task.description,
+        priority: task.priority,
+        ownerId: task.ownerId,
+        assignedId: task.assignedId,
+        dueDate: task.dueDate,
+        isCompleted: false,
+        isPending: true,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      await localDb.addTask(pendingTask);
+      await localDb.addPendingChange(
+        taskId: localTaskId,
+        changeType: 'CREATE',
+        beforeChange: {},
+        afterChange: pendingTask.toJson(),
+      );
+
+      return Result.success(pendingTask);
     } on SocketException {
-      return Result.error('Impossible de créer la tâche. Vérifiez votre connexion internet.');
+      // Handle network error by creating pending task
+      final localTaskId = DateTime.now().millisecondsSinceEpoch;
+      final pendingTask = Task(
+        id: localTaskId,
+        title: task.title,
+        description: task.description,
+        priority: task.priority,
+        ownerId: task.ownerId,
+        assignedId: task.assignedId,
+        dueDate: task.dueDate,
+        isCompleted: false,
+        isPending: true,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      await localDb.addTask(pendingTask);
+      await localDb.addPendingChange(
+        taskId: localTaskId,
+        changeType: 'CREATE',
+        beforeChange: {},
+        afterChange: pendingTask.toJson(),
+      );
+
+      return Result.success(pendingTask);
     } on HttpException {
       return Result.error('Erreur réseau lors de la création de la tâche.');
     } catch (e) {
@@ -377,6 +466,65 @@ class ApiService {
   }
 
   static Future<Result<Task>> updateTask(Task task) async {
+    final localDb = LocalDatabaseService.instance;
+    final connectivity = ConnectivityService.instance;
+
+    // Check connectivity first
+    final isOnline = await connectivity.isOnline();
+
+    if (!isOnline) {
+      // Store original task state before changes
+      final originalTask = await localDb.getTasks().then(
+        (tasks) => tasks.firstWhere((t) => t.id == task.id, orElse: () => task),
+      );
+
+      // Update task locally and mark as pending
+      final updatedTask = Task(
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        priority: task.priority,
+        ownerId: task.ownerId,
+        assignedId: task.assignedId,
+        dueDate: task.dueDate,
+        isCompleted: task.isCompleted,
+        isPending: true, // Mark as pending
+        createdAt: task.createdAt,
+        updatedAt: DateTime.now(),
+      );
+
+      // Save to local database
+      await localDb.updateTask(updatedTask);
+
+      // Add to pending changes
+      await localDb.addPendingChange(
+        taskId: task.id!,
+        changeType: 'UPDATE',
+        beforeChange: originalTask.toJson(),
+        afterChange: updatedTask.toJson(),
+      );
+
+      return Result.success(updatedTask);
+    }
+
+    // First check if task is completed remotely before updating
+    final remoteTaskResult = await _fetchSingleTask(task.id!);
+    if (remoteTaskResult.isSuccess) {
+      final remoteTask = remoteTaskResult.data!;
+      if (remoteTask.isCompleted) {
+        // Show notification that task can't be updated because it's completed
+        await NotifService().showNotification(
+          id: task.getId,
+          title: 'Mise à jour impossible',
+          body:
+              'La tâche ${task.title} ne peut pas être modifiée car elle est déjà terminée.',
+        );
+        return Result.error(
+          'La tâche ne peut pas être modifiée car elle est déjà terminée.',
+        );
+      }
+    }
+
     final url = '$baseUrl${ApiModel.tasks}/${task.getId}';
     debugPrint('PUT $url');
 
@@ -384,46 +532,111 @@ class ApiService {
       final requestBody = task.toJson();
 
       final response = await http
-          .put(  // Changed from POST to PUT
-        Uri.parse(url),
-        headers: _headers,
-        body: jsonEncode(requestBody),
-      )
+          .put(Uri.parse(url), headers: _headers, body: jsonEncode(requestBody))
           .timeout(Duration(seconds: ApiModel.timeoutInSec));
 
       debugPrint('Request body: ${jsonEncode(requestBody)}');
       debugPrint('Response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Save to local database
-        await LocalDatabaseService.instance.updateTask(task);
+        // Update task to not pending since it was successful
+        final updatedTask = Task(
+          id: task.id,
+          title: task.title,
+          description: task.description,
+          priority: task.priority,
+          ownerId: task.ownerId,
+          assignedId: task.assignedId,
+          dueDate: task.dueDate,
+          isCompleted: task.isCompleted,
+          isPending: false, // Not pending since it was updated successfully
+          createdAt: task.createdAt,
+          updatedAt: DateTime.now(),
+        );
 
-        return Result.success(task);
+        // Save to local database
+        await localDb.updateTask(updatedTask);
+
+        return Result.success(updatedTask);
       } else if (response.statusCode == 401 || response.statusCode == 403) {
         return Result.error('Session expirée. Veuillez vous reconnecter.');
       } else {
-        return Result.error('Erreur lors de la modificaion de la tâche: ${response.statusCode}');
+        return Result.error(
+          'Erreur lors de la modification de la tâche: ${response.statusCode}',
+        );
       }
     } on TimeoutException {
-      return Result.error('Délai d\'attente dépassé lors de la modificaion de la tâche.');
+      // Handle timeout by storing as pending change
+      final originalTask = await localDb.getTasks().then(
+        (tasks) => tasks.firstWhere((t) => t.id == task.id, orElse: () => task),
+      );
+
+      final pendingTask = Task(
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        priority: task.priority,
+        ownerId: task.ownerId,
+        assignedId: task.assignedId,
+        dueDate: task.dueDate,
+        isCompleted: task.isCompleted,
+        isPending: true,
+        createdAt: task.createdAt,
+        updatedAt: DateTime.now(),
+      );
+
+      await localDb.updateTask(pendingTask);
+      await localDb.addPendingChange(
+        taskId: task.id!,
+        changeType: 'UPDATE',
+        beforeChange: originalTask.toJson(),
+        afterChange: pendingTask.toJson(),
+      );
+
+      return Result.success(pendingTask);
     } on SocketException {
-      return Result.error('Impossible de créer la tâche. Vérifiez votre connexion internet.');
+      // Handle network error by storing as pending change
+      final originalTask = await localDb.getTasks().then(
+        (tasks) => tasks.firstWhere((t) => t.id == task.id, orElse: () => task),
+      );
+
+      final pendingTask = Task(
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        priority: task.priority,
+        ownerId: task.ownerId,
+        assignedId: task.assignedId,
+        dueDate: task.dueDate,
+        isCompleted: task.isCompleted,
+        isPending: true,
+        createdAt: task.createdAt,
+        updatedAt: DateTime.now(),
+      );
+
+      await localDb.updateTask(pendingTask);
+      await localDb.addPendingChange(
+        taskId: task.id!,
+        changeType: 'UPDATE',
+        beforeChange: originalTask.toJson(),
+        afterChange: pendingTask.toJson(),
+      );
+
+      return Result.success(pendingTask);
     } on HttpException {
-      return Result.error('Erreur réseau lors de la modificaion de la tâche.');
+      return Result.error('Erreur réseau lors de la modification de la tâche.');
     } catch (e) {
-      return Result.error('Erreur lors de la modificaion de la tâche: $e');
+      return Result.error('Erreur lors de la modification de la tâche: $e');
     }
   }
+
   static Future<Result<void>> deleteTask(int taskId) async {
     final url = '$baseUrl${ApiModel.tasks}/$taskId';
     debugPrint('DELETE $url');
 
     try {
       final response = await http
-          .delete(
-            Uri.parse(url),
-            headers: _headers,
-          )
+          .delete(Uri.parse(url), headers: _headers)
           .timeout(Duration(seconds: ApiModel.timeoutInSec));
 
       debugPrint('Response: ${response.statusCode} ${response.body}');
@@ -434,19 +647,24 @@ class ApiService {
       } else if (response.statusCode == 401 || response.statusCode == 403) {
         return Result.error('Session expirée. Veuillez vous reconnecter.');
       } else {
-        return Result.error('Erreur lors de la suppression de la tâche: ${response.statusCode}');
+        return Result.error(
+          'Erreur lors de la suppression de la tâche: ${response.statusCode}',
+        );
       }
     } on TimeoutException {
-      return Result.error('Délai d\'attente dépassé lors de la suppression de la tâche.');
+      return Result.error(
+        'Délai d\'attente dépassé lors de la suppression de la tâche.',
+      );
     } on SocketException {
-      return Result.error('Impossible de supprimer la tâche. Vérifiez votre connexion internet.');
+      return Result.error(
+        'Impossible de supprimer la tâche. Vérifiez votre connexion internet.',
+      );
     } on HttpException {
       return Result.error('Erreur réseau lors de la suppression de la tâche.');
     } catch (e) {
       return Result.error('Erreur lors de la suppression de la tâche: $e');
     }
   }
-
 
   static Future<void> logout() async {
     await _secureStorage.deleteToken();
@@ -465,6 +683,241 @@ class ApiService {
     } catch (e) {
       debugPrint('Token validation error: $e');
       return false;
+    }
+  }
+
+  // Helper method to fetch a single task for validation
+  static Future<Result<Task>> _fetchSingleTask(int taskId) async {
+    final url = '$baseUrl${ApiModel.tasks}/$taskId';
+    debugPrint('GET $url');
+
+    try {
+      final response = await http
+          .get(Uri.parse(url), headers: _headers)
+          .timeout(Duration(seconds: 5));
+
+      debugPrint('Response: ${response.statusCode} ${response.body}');
+
+      if (response.statusCode == 200) {
+        final taskJson = jsonDecode(response.body);
+        final task = Task.fromApiJson(taskJson);
+        return Result.success(task);
+      } else {
+        return Result.error('Failed to fetch task: ${response.body}');
+      }
+    } catch (e) {
+      return Result.error('Error fetching task: $e');
+    }
+  }
+
+  // Auto-sync pending changes when connection is restored
+  static Future<void> syncPendingChanges() async {
+    final localDb = LocalDatabaseService.instance;
+    final connectivity = ConnectivityService.instance;
+
+    // Check if we're online
+    final isOnline = await connectivity.isOnline();
+    if (!isOnline) {
+      debugPrint('Cannot sync: No internet connection');
+      return;
+    }
+
+    // Get all pending changes
+    final pendingChanges = await localDb.getPendingChanges();
+    if (pendingChanges.isEmpty) {
+      debugPrint('No pending changes to sync');
+      return;
+    }
+
+    debugPrint('Syncing ${pendingChanges.length} pending changes...');
+
+    for (final change in pendingChanges) {
+      final changeId = change['id'] as int;
+      final taskId = change['task_id'] as int;
+      final changeType = change['change_type'] as String;
+      final afterChangeJson = jsonDecode(change['after_change']);
+
+      try {
+        if (changeType == 'CREATE') {
+          // Try to create the task on the server
+          final taskData = Task(
+            id: null, // Will be assigned by server
+            title: afterChangeJson['title'],
+            description: afterChangeJson['description'],
+            priority: Priority.values.firstWhere(
+              (p) =>
+                  p.toString().split('.')[1].toUpperCase() ==
+                  afterChangeJson['priority'],
+              orElse: () => Priority.low,
+            ),
+            ownerId: afterChangeJson['ownerId'] ?? 1,
+            assignedId: afterChangeJson['assigneeId'] != null
+                ? User(
+                    id: afterChangeJson['assigneeId'],
+                    username: '',
+                    email: '',
+                  )
+                : null,
+            dueDate: DateTime.fromMillisecondsSinceEpoch(
+              afterChangeJson['dueDate'] * 1000,
+            ),
+            isCompleted: afterChangeJson['completed'] ?? false,
+            isPending: false,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          );
+
+          final result = await _createTaskOnServer(taskData);
+          if (result.isSuccess) {
+            final serverTask = result.data!;
+            // Update local task with server ID
+            await localDb.markTaskAsSynced(taskId, serverTask.id!);
+            // Mark pending change as synced
+            await localDb.markPendingChangeSynced(changeId);
+            debugPrint(
+              'Successfully synced CREATE for task $taskId -> ${serverTask.id}',
+            );
+          } else {
+            debugPrint(
+              'Failed to sync CREATE for task $taskId: ${result.errorMessage}',
+            );
+          }
+        } else if (changeType == 'UPDATE') {
+          // First check if the task is completed remotely
+          final remoteTaskResult = await _fetchSingleTask(taskId);
+          if (remoteTaskResult.isSuccess &&
+              remoteTaskResult.data!.isCompleted) {
+            // Task is completed remotely, show notification and remove pending change
+            await NotifService().showNotification(
+              id: taskId,
+              title: 'Synchronisation impossible',
+              body: 'La tâche ne peut pas être synchronisée car elle est déjà terminée sur le serveur.',
+            );
+            await localDb.markPendingChangeSynced(changeId);
+            debugPrint('Skipped UPDATE for completed task $taskId');
+            continue;
+          }
+
+          // Try to update the task on the server
+          final taskData = Task(
+            id: taskId,
+            title: afterChangeJson['title'],
+            description: afterChangeJson['description'],
+            priority: Priority.values.firstWhere(
+              (p) =>
+                  p.toString().split('.')[1].toUpperCase() ==
+                  afterChangeJson['priority'],
+              orElse: () => Priority.low,
+            ),
+            ownerId: afterChangeJson['ownerId'] ?? 1,
+            assignedId: afterChangeJson['assigneeId'] != null
+                ? User(
+                    id: afterChangeJson['assigneeId'],
+                    username: '',
+                    email: '',
+                  )
+                : null,
+            dueDate: DateTime.fromMillisecondsSinceEpoch(
+              afterChangeJson['dueDate'] * 1000,
+            ),
+            isCompleted: afterChangeJson['completed'] ?? false,
+            isPending: false,
+            createdAt: DateTime.fromMillisecondsSinceEpoch(
+              afterChangeJson['createdAt'] ??
+                  DateTime.now().millisecondsSinceEpoch,
+            ),
+            updatedAt: DateTime.now(),
+          );
+
+          final result = await _updateTaskOnServer(taskData);
+          if (result.isSuccess) {
+            // Update local task to not pending
+            await localDb.updateTask(taskData);
+            // Mark pending change as synced
+            await localDb.markPendingChangeSynced(changeId);
+            debugPrint('Successfully synced UPDATE for task $taskId');
+          } else {
+            debugPrint(
+              'Failed to sync UPDATE for task $taskId: ${result.errorMessage}',
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint('Error syncing change $changeId: $e');
+      }
+    }
+
+    debugPrint('Pending changes sync completed');
+  }
+
+  // Helper method to create task on server without offline handling
+  static Future<Result<Task>> _createTaskOnServer(Task task) async {
+    final url = '$baseUrl${ApiModel.tasks}';
+    debugPrint('POST $url (sync)');
+
+    try {
+      final requestBody = task.toJson();
+
+      final response = await http
+          .post(
+            Uri.parse(url),
+            headers: _headers,
+            body: jsonEncode(requestBody),
+          )
+          .timeout(Duration(seconds: ApiModel.timeoutInSec));
+
+      debugPrint('Sync request body: ${jsonEncode(requestBody)}');
+      debugPrint('Sync response: ${response.statusCode} ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseJson = jsonDecode(response.body);
+        final serverTaskId = responseJson['taskId'] as int;
+
+        final createdTask = Task(
+          id: serverTaskId,
+          title: task.title,
+          description: task.description,
+          priority: task.priority,
+          ownerId: task.ownerId,
+          assignedId: task.assignedId,
+          dueDate: task.dueDate,
+          isCompleted: task.isCompleted,
+          isPending: false,
+          createdAt: task.createdAt,
+          updatedAt: DateTime.now(),
+        );
+
+        return Result.success(createdTask);
+      } else {
+        return Result.error('Server error: ${response.statusCode}');
+      }
+    } catch (e) {
+      return Result.error('Sync error: $e');
+    }
+  }
+
+  // Helper method to update task on server without offline handling
+  static Future<Result<Task>> _updateTaskOnServer(Task task) async {
+    final url = '$baseUrl${ApiModel.tasks}/${task.id}';
+    debugPrint('PUT $url (sync)');
+
+    try {
+      final requestBody = task.toJson();
+
+      final response = await http
+          .put(Uri.parse(url), headers: _headers, body: jsonEncode(requestBody))
+          .timeout(Duration(seconds: ApiModel.timeoutInSec));
+
+      debugPrint('Sync request body: ${jsonEncode(requestBody)}');
+      debugPrint('Sync response: ${response.statusCode} ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return Result.success(task);
+      } else {
+        return Result.error('Server error: ${response.statusCode}');
+      }
+    } catch (e) {
+      return Result.error('Sync error: $e');
     }
   }
 }
