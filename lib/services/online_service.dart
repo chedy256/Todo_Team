@@ -66,7 +66,7 @@ class ApiService {
             'username': username,
           }),
         )
-        .timeout(Duration(seconds: 5));
+        .timeout(Duration(seconds: 20));
 
     debugPrint('Response: ${response.statusCode} ${response.body}');
 
@@ -98,7 +98,7 @@ class ApiService {
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({'email': email, 'password': password}),
           )
-          .timeout(Duration(seconds: 5));
+          .timeout(Duration(seconds: 20));
 
       debugPrint('Response: ${response.statusCode} ${response.body}');
 
@@ -168,7 +168,7 @@ class ApiService {
     try {
       final response = await http
           .get(Uri.parse(url), headers: _headers)
-          .timeout(Duration(seconds: 5));
+          .timeout(Duration(seconds: 20));
 
       debugPrint('Response: ${response.statusCode} ${response.body}');
 
@@ -207,7 +207,7 @@ class ApiService {
     try {
       final response = await http
           .get(Uri.parse(url), headers: _headers)
-          .timeout(Duration(seconds: 5));
+          .timeout(Duration(seconds: 20));
 
       debugPrint('Response: ${response.statusCode} ${response.body}');
 
@@ -267,7 +267,7 @@ class ApiService {
     try {
       final response = await http
           .get(Uri.parse(url), headers: _headers)
-          .timeout(Duration(seconds: 5));
+          .timeout(Duration(seconds: 20));
 
       debugPrint('Response: ${response.statusCode} ${response.body}');
 

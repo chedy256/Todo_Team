@@ -21,7 +21,7 @@ class ConnectivityService {
   Future<bool> isServerReachable() async {
     try {
       final uri = Uri.parse("${ApiService.baseUrl}/${ApiModel.status}");
-      final socket = await Socket.connect(uri.host, uri.port, timeout: Duration(seconds: 5));
+      final socket = await Socket.connect(uri.host, uri.port, timeout: Duration(seconds: 15));
       socket.destroy();
       return true;
     } catch (e) {
