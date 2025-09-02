@@ -1,4 +1,0 @@
-add windows:
-filterWindow
-onTaskSelection (two owner=userid or != userid)
-
