@@ -457,4 +457,17 @@ class LocalDatabaseService {
       whereArgs: [taskId],
     );
   }
+
+  // Public getters for table and column names
+  String get tasksTableName => _tasksTableName;
+  String get tasksIdColumn => _tasksIdColumn;
+  String get tasksIsPendingColumn => _tasksIsPendingColumn;
+  String get tasksIsCompletedColumn => _tasksIsCompletedColumn;
+  String get pendingChangesTableName => _pendingChangesTableName;
+  String get pendingChangesIdColumn => _pendingChangesIdColumn;
+  String get pendingChangesTaskIdColumn => _pendingChangesTaskIdColumn;
+  String get pendingChangesChangeTypeColumn => _pendingChangesChangeTypeColumn;
+  String get pendingChangesBeforeChangeColumn => _pendingChangesBeforeChangeColumn;
+  String get pendingChangesAfterChangeColumn => _pendingChangesAfterChangeColumn;
+  String get pendingChangesSyncedColumn => _pendingChangesSyncedColumn;
 }
