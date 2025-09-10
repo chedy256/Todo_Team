@@ -9,7 +9,6 @@ import 'package:project/models/task_model.dart';
 import 'package:project/models/user_model.dart';
 import 'package:project/services/local_database_service.dart';
 import 'package:project/services/secure_storage.dart';
-import 'package:project/services/rate_limiter_service.dart';
 import 'package:project/services/connectivity_service.dart';
 import 'package:project/services/notif_service.dart';
 
@@ -193,13 +192,6 @@ class ApiService {
   }
 
   static Future<Result<List<User>>> fetchUsers() async {
-    final rateLimiter = RateLimiterService();
-    const endpoint = 'users';
-
-    // Check if we can make the call based on rate limiting
-    if (!rateLimiter.canMakeCall(endpoint)) {
-      return Result.error('Rate limited - using local data');
-    }
 
     final url = '$baseUrl${ApiModel.users}';
     debugPrint('GET $url');
@@ -212,9 +204,6 @@ class ApiService {
       debugPrint('Response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 200) {
-        // Record successful API call
-        rateLimiter.recordCall(endpoint);
-
         final List<dynamic> usersJson = jsonDecode(response.body);
         final List<User> apiUsers = usersJson
             .map((userJson) => User.fromJson(userJson))
@@ -253,13 +242,6 @@ class ApiService {
   }
 
   static Future<Result<List<Task>>> fetchTasks() async {
-    final rateLimiter = RateLimiterService();
-    const endpoint = 'tasks';
-
-    // Check if we can make the call based on rate limiting
-    if (!rateLimiter.canMakeCall(endpoint)) {
-      return Result.error('Rate limited - using local data');
-    }
 
     final url = '$baseUrl${ApiModel.tasks}';
     debugPrint('GET $url');
@@ -272,9 +254,6 @@ class ApiService {
       debugPrint('Response: ${response.statusCode} ${response.body}');
 
       if (response.statusCode == 200) {
-        // Record successful API call
-        rateLimiter.recordCall(endpoint);
-
         final List<dynamic> tasksJson = jsonDecode(response.body);
         final List<Task> apiTasks = tasksJson
             .map((taskJson) => Task.fromApiJson(taskJson))
