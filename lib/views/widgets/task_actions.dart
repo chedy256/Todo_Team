@@ -195,45 +195,7 @@ class _TaskActionsState extends State<TaskActions> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              widget.task.isCompleted
-                  ? InkWell(
-                      child: SizedBox(
-                        width: 150,
-                        height: 70,
-                        child: Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Row(
-                            spacing: 10,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.cancel_outlined,
-                                color: Colors.orange,
-                                size: 30,
-                              ),
-                              Text("Non terminée", textAlign: TextAlign.center),
-                            ],
-                          ),
-                        ),
-                      ),
-                      onTap: () async {
-                        widget.task.setCompleted(false);
-                        widget.task.updatedAt = DateTime.now();
-                        databaseService.updateTask(widget.task);
-
-                        final result = await ApiService.updateTask(widget.task);
-                        if (!result.isSuccess && context.mounted) {
-                          Utils.showErrorSnackBar(
-                            context,
-                            result.errorMessage ?? 'Erreur lors de la mise à jour de la tâche',
-                          );
-                        }
-                        _handleTaskChange();
-                      },
-                    )
-                  : widget.task.assignedId != null
+              !widget.task.isCompleted && widget.task.assignedId != null
                   ? InkWell(
                       child: SizedBox(
                         width: 150,

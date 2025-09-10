@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project/services/dialogs_service.dart';
 import 'package:provider/provider.dart';
 import 'package:project/controllers/auth_controller.dart';
 import 'package:project/controllers/task_provider.dart';
@@ -49,7 +50,16 @@ class _TasksScreenState extends State<TasksScreen> {
         title: Text('ToDo Team', style: TextStyle(fontWeight: FontWeight.bold)),
         leading: IconButton(
           padding: EdgeInsets.all(5),
-          onPressed: () => _authController.logout(context),
+          onPressed: () async {
+            if (await DialogService.showConfirmationDialog(
+                  context,
+                  "Se Déconnecter",
+                  "Etes-vous sur de vous déconnecter ?",
+                ) &&
+                context.mounted) {
+              _authController.logout(context);
+            }
+          },
           icon: Icon(Icons.logout_outlined, color: Colors.black),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.amberAccent.shade100,
@@ -60,9 +70,7 @@ class _TasksScreenState extends State<TasksScreen> {
             shadowColor: Colors.black26,
           ),
         ),
-        actions: [
-          const ConnectivityStatusWidget(),
-        ],
+        actions: [const ConnectivityStatusWidget()],
       ),
       body: SafeArea(
         child: Column(
@@ -235,20 +243,20 @@ class _TasksScreenState extends State<TasksScreen> {
     }
     return RefreshIndicator(
       onRefresh: () async => context.read<TaskProvider>().refreshTasks(),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: Colors.grey, size: 64),
-              const SizedBox(height: 16),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
-              ),
-            ],
-          ),
-        )
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.grey, size: 64),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
