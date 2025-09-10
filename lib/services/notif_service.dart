@@ -1,3 +1,5 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -141,4 +143,104 @@ class NotifService {
   }
   Future <void> cancelAllNotifications() async => await notificationPlugin.cancelAll();
 
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+  String? _fcmToken;
+
+  String? get fcmToken => _fcmToken;
+
+  Future<void> initFCM() async {
+    try {
+      NotificationSettings settings = await _firebaseMessaging.requestPermission(
+        alert: true,
+        announcement: false,
+        badge: true,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
+        sound: true,
+      );
+
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        debugPrint('User granted permission');
+      } else if (settings.authorizationStatus ==
+          AuthorizationStatus.provisional) {
+        debugPrint('User granted provisional permission');
+      } else {
+        debugPrint('User declined or has not accepted permission');
+      }
+
+      // Get FCM token in background without blocking app launch
+      _getFCMTokenWithTimeout();
+
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+        debugPrint('Received a message while in the foreground!');
+        debugPrint('Message data: ${message.data}');
+
+        if (message.notification != null) {
+          await showNotification(
+          id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          title: message.notification!.title ?? 'New Message',
+          body: message.notification!.body ?? 'You have a new message',
+          );
+        }
+      });
+
+      FirebaseMessaging.onBackgroundMessage(handleBackgroundMessage);
+    } catch (e) {
+      debugPrint('Error initializing FCM: $e');
+    }
+  }
+
+  /// Get FCM token with timeout and retry mechanism
+  Future<void> _getFCMTokenWithTimeout() async {
+    // Run in background without blocking
+    Future.delayed(Duration.zero, () async {
+      int maxRetries = 3;
+      int retryCount = 0;
+
+      while (retryCount < maxRetries && _fcmToken == null) {
+        try {
+          // Add timeout to prevent indefinite waiting
+          final fcmToken = await _firebaseMessaging.getToken()
+              .timeout(
+                const Duration(seconds: 10),
+                onTimeout: () {
+                  debugPrint('FCM token request timed out');
+                  return null;
+                },
+              );
+
+          if (fcmToken != null) {
+            _fcmToken = fcmToken;
+            debugPrint('FCM Token: $fcmToken');
+            // Token retrieved successfully, break the retry loop
+            break;
+          }
+        } catch (e) {
+          debugPrint('Error getting FCM token (attempt ${retryCount + 1}): $e');
+        }
+
+        retryCount++;
+        if (retryCount < maxRetries) {
+          // Wait before retrying (exponential backoff)
+          await Future.delayed(Duration(seconds: retryCount * 2));
+        }
+      }
+
+      if (_fcmToken == null) {
+        debugPrint('Failed to get FCM token after $maxRetries attempts');
+      }
+    });
+  }
+
+  /// Manually retry getting FCM token when connection is restored
+  Future<void> retryFCMToken() async {
+    if (_fcmToken == null) {
+      debugPrint('Retrying FCM token retrieval...');
+      await _getFCMTokenWithTimeout();
+    }
+  }
+}
+Future <void> handleBackgroundMessage(RemoteMessage message) async {
+  debugPrint(message.notification?.title);
 }
