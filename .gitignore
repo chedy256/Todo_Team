@@ -29,6 +29,7 @@ ToDo
 # Envirement variables file
 .env
 android/app/google-services.json
+lib/models/firebase_options.dart
 
 # Flutter/Dart/Pub related
 **/doc/api/
