@@ -73,235 +73,250 @@ class _TaskActionsState extends State<TaskActions> {
             },
             icon: const Icon(Icons.close, size: 30),
           ),
-          (AuthController.currentUser!.id == widget.task.ownerId)
-              ? (widget.task.assignedId == null || widget.task.isCompleted)
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          InkWell(
-                            child: SizedBox(
-                              width: 150,
-                              height: 70,
-                              child: Card(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  spacing: 10,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.delete,
-                                      color: Colors.red,
-                                      size: 30,
-                                    ),
-                                    const Text("Supprimer"),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            onTap: () async {
-                              if (await DialogService.showConfirmationDialog(
-                                context,
-                                "Confirmation",
-                                'êtes-vous sûr de vouloir supprimer cette tâche ?',
-                              )) {
-                                TaskActions.isBottomSheetOpen = false;
-                                _handleTaskDelete(); // Use delete handler for list refresh
-                              } else {
-                                return;
-                              }
-                            },
-                          ),
-                          InkWell(
-                            child: SizedBox(
-                              width: 150,
-                              height: 70,
-                              child: Card(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  spacing: 10,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.edit,
-                                      color: Colors.blue,
-                                      size: 30,
-                                    ),
-                                    const Text("Modifier"),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            onTap: () async {
-                              TaskActions.isBottomSheetOpen = false;
-                              Navigator.pop(context);
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      EditTaskScreen(task: widget.task),
-                                ),
-                              );
-                              if (result == true) {
-                                // For task edits, we need to refresh the parent list to get updated task data
-                                widget.onTaskChanged?.call();
-                              }
-                            },
-                          ),
-                        ],
-                      )
-                    : InkWell(
-                        child: SizedBox(
-                          width: 150,
-                          height: 70,
-                          child: Card(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              spacing: 10,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.edit,
-                                  color: Colors.blue,
-                                  size: 30,
-                                ),
-                                const Text("Modifier"),
-                              ],
-                            ),
-                          ),
-                        ),
-                        onTap: () async {
-                          TaskActions.isBottomSheetOpen = false;
-                          Navigator.pop(context);
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  EditTaskScreen(task: widget.task),
-                            ),
-                          );
-                          if (result == true) {
-                            // For task edits, we need to refresh the parent list to get updated task data
-                            widget.onTaskChanged?.call();
-                          }
-                        },
-                      )
-              : const SizedBox.shrink(),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              !widget.task.isCompleted && widget.task.assignedId != null
-                  ? InkWell(
-                      child: SizedBox(
-                        width: 150,
-                        height: 70,
-                        child: Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Row(
-                            spacing: 10,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.check_circle_outline,
-                                color: Colors.green,
-                                size: 30,
-                              ),
-                              Text("Terminée"),
-                            ],
-                          ),
-                        ),
-                      ),
-                      onTap: () async {
-                        widget.task.setCompleted(true);
-                        widget.task.updatedAt = DateTime.now();
-                        databaseService.updateTask(widget.task);
-
-                        final result = await ApiService.updateTask(widget.task);
-                        if (!result.isSuccess && context.mounted) {
-                          Utils.showErrorSnackBar(
-                            context,
-                            result.errorMessage ?? 'Erreur lors de la mise à jour de la tâche',
-                          );
-                        }
-                        _handleTaskChange();
-                      },
-                    )
-                  : InkWell(
-                      child: SizedBox(
-                        width: 150,
-                        height: 70,
-                        child: Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Row(
-                            spacing: 10,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.add_box_outlined,
-                                color: Colors.cyan,
-                                size: 30,
-                              ),
-                              Text(
-                                "Prendre \nen charge",
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      onTap: () async {
-                        widget.task.setAssignedId(AuthController.currentUser);
-                        widget.task.updatedAt = DateTime.now();
-                        databaseService.updateTask(widget.task);
-
-                        final result = await ApiService.updateTask(widget.task);
-                        if (!result.isSuccess && context.mounted) {
-                          Utils.showErrorSnackBar(
-                            context,
-                            result.errorMessage ?? 'Erreur lors de la mise à jour de la tâche',
-                          );
-                        }
-                        _handleTaskChange();
-                      },
-                    ),
-              InkWell(
-                child: SizedBox(
-                  width: 150,
-                  height: 70,
-                  child: Card(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Row(
+          widget.task.isCompleted
+              ? Column(
+                  spacing: 10,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    widget.task.getOwnerId == AuthController.currentUser?.id
+                        ? deleteButton()
+                        : SizedBox.shrink(),
+                    Row(
                       spacing: 10,
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        Icon(Icons.description_outlined, size: 30),
-                        Text("Description", textAlign: TextAlign.center),
+                        uncompletedButton(context),
+                        descriptionButton(),
                       ],
                     ),
-                  ),
+                  ],
+                )
+              : widget.task.assignedId !=
+                    null //if task is not completed && assigned to someone
+              ? Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  spacing: 10,
+                  children: [
+                    widget.task.getOwnerId == AuthController.currentUser?.id
+                        ? editButton()
+                        : SizedBox.shrink(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      spacing: 10,
+                      children: [completedButton(context), descriptionButton()],
+                    ),
+                  ],
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  spacing: 10,
+                  children: [
+                    widget.task.getOwnerId == AuthController.currentUser?.id
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            spacing: 10,
+                            children: [editButton(), deleteButton()],
+                          )
+                        : SizedBox.shrink(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      spacing: 10,
+                      children: [
+                        takeInChargeButton(context),
+                        descriptionButton(),
+                      ],
+                    ),
+                  ],
                 ),
-                onTap: () => DialogService.showInfoDialog(
-                  context,
-                  'Description',
-                  widget.task.description,
-                ),
-              ),
-            ],
-          ),
+          SizedBox.shrink(),
           const SizedBox(height: 30),
         ],
       ),
     );
   }
+
+  InkWell editButton() => InkWell(
+    child: SizedBox(
+      width: 150,
+      height: 70,
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Row(
+          spacing: 10,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.edit, color: Colors.blue, size: 30),
+            const Text("Modifier"),
+          ],
+        ),
+      ),
+    ),
+    onTap: () async {
+      TaskActions.isBottomSheetOpen = false;
+      Navigator.pop(context);
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EditTaskScreen(task: widget.task),
+        ),
+      );
+      if (result == true) {
+        // For task edits, we need to refresh the parent list to get updated task data
+        widget.onTaskChanged?.call();
+      }
+    },
+  );
+
+  InkWell completedButton(BuildContext context) => InkWell(
+    child: SizedBox(
+      width: 150,
+      height: 70,
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: const Row(
+          spacing: 10,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.check_circle_outline, color: Colors.green, size: 30),
+            Text("Terminée"),
+          ],
+        ),
+      ),
+    ),
+    onTap: () async {
+      widget.task.setCompleted(true);
+      widget.task.updatedAt = DateTime.now();
+      databaseService.updateTask(widget.task);
+
+      final result = await ApiService.updateTask(widget.task);
+      if (!result.isSuccess && context.mounted) {
+        Utils.showErrorSnackBar(
+          context,
+          result.errorMessage ?? 'Erreur lors de la mise à jour de la tâche',
+        );
+      }
+      _handleTaskChange();
+    },
+  );
+
+  InkWell uncompletedButton(BuildContext context) => InkWell(
+    child: SizedBox(
+      width: 150,
+      height: 70,
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: const Row(
+          spacing: 10,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.settings_backup_restore_rounded,
+              color: Colors.orange,
+              size: 30,
+            ),
+            Text("Non\nterminée", textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    ),
+    onTap: () async {
+      widget.task.setCompleted(false);
+      widget.task.updatedAt = DateTime.now();
+      databaseService.updateTask(widget.task);
+
+      final result = await ApiService.updateTask(widget.task);
+      if (!result.isSuccess && context.mounted) {
+        Utils.showErrorSnackBar(
+          context,
+          result.errorMessage ?? 'Erreur lors de la mise à jour de la tâche',
+        );
+      }
+      _handleTaskChange();
+    },
+  );
+
+  InkWell takeInChargeButton(BuildContext context) => InkWell(
+    child: SizedBox(
+      width: 150,
+      height: 70,
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: const Row(
+          spacing: 10,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_box_outlined, color: Colors.cyan, size: 30),
+            Text("Prendre \nen charge", textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    ),
+    onTap: () async {
+      widget.task.setAssignedId(AuthController.currentUser);
+      widget.task.updatedAt = DateTime.now();
+      databaseService.updateTask(widget.task);
+
+      final result = await ApiService.updateTask(widget.task);
+      if (!result.isSuccess && context.mounted) {
+        Utils.showErrorSnackBar(
+          context,
+          result.errorMessage ?? 'Erreur lors de la mise à jour de la tâche',
+        );
+      }
+      _handleTaskChange();
+    },
+  );
+
+  InkWell descriptionButton() => InkWell(
+    child: SizedBox(
+      width: 150,
+      height: 70,
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: const Row(
+          spacing: 10,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.description_outlined, size: 30),
+            Text("Description", textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    ),
+    onTap: () => DialogService.showInfoDialog(
+      context,
+      'Description',
+      widget.task.description,
+    ),
+  );
+
+  InkWell deleteButton() => InkWell(
+    child: SizedBox(
+      width: 150,
+      height: 70,
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Row(
+          spacing: 10,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.delete, color: Colors.red, size: 30),
+            const Text("Supprimer"),
+          ],
+        ),
+      ),
+    ),
+    onTap: () async {
+      if (await DialogService.showConfirmationDialog(
+        context,
+        "Confirmation",
+        'êtes-vous sûr de vouloir supprimer cette tâche ?',
+      )) {
+        TaskActions.isBottomSheetOpen = false;
+        _handleTaskDelete(); // Use delete handler for list refresh
+      } else {
+        return;
+      }
+    },
+  );
 }
