@@ -27,7 +27,6 @@ migrate_working_dir/
 ToDo
 
 # Envirement variables file
-.env
 android/app/google-services.json
 lib/models/firebase_options.dart
 
